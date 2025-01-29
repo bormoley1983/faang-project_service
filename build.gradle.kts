@@ -131,7 +131,6 @@ tasks.jacocoTestCoverageVerification {
     }
 }
 
-
 tasks.withType<Test> {
     useJUnitPlatform()
 }

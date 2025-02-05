@@ -71,7 +71,7 @@ public class MinioService {
         }
     }
 
-    public void removePdfFromMinio(String fileName) {
+    public Boolean removePdfFromMinio(String fileName) {
         try {
             StatObjectResponse statObjectResponse = minioClient.statObject(
                     StatObjectArgs.builder()
@@ -88,9 +88,11 @@ public class MinioService {
                                 .build()
                 );
                 log.info("Old file deleted from Minio: {}", fileName);
+                return true;
             }
         } catch (MinioException | IOException | InvalidKeyException | NoSuchAlgorithmException e) {
             log.warn("Error deleting file {} from Minio {}: ", fileName, e.getMessage());
         }
+        return false;
     }
 }

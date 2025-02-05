@@ -10,6 +10,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
@@ -24,9 +25,13 @@ public class ProjectReportService {
     private final PdfReportGeneratorService pdfReportGeneratorService;
     private final ProjectRepository projectRepository;
 
+    @Transactional
     public ProjectReport createProjectReport(Long projectId) {
         String fileName = "project_report_" + projectId + ".pdf";
-        minioService.removePdfFromMinio(fileName);
+        Boolean removeFile = minioService.removePdfFromMinio(fileName);
+        if (removeFile){
+            projectReportRepository.deleteReportByProjectId(projectId);
+        }
         Resource pdfResource = generateAndUploadProjectReport(projectId);
         try {
             minioService.uploadPdfToMinio(pdfResource.getInputStream(), fileName);

@@ -21,7 +21,6 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
-import javax.naming.ServiceUnavailableException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
@@ -57,7 +56,7 @@ public class PdfReportGeneratorService {
                 yPosition = drawTextLine(contentStream, margin + 10, yPosition, "Status: " + project.getStatus(),
                         PDType1Font.HELVETICA, 12);
                 yPosition = drawTextLine(contentStream, margin + 10, yPosition,
-                        "Owner: " + getOwnerName(project.getOwnerId()), PDType1Font.HELVETICA, 12);
+                        "Owner: " + "Oleg", PDType1Font.HELVETICA, 12);
                 yPosition -= 10;
 
                 yPosition = drawTextLine(contentStream, margin, yPosition, "Project Team", PDType1Font.HELVETICA_BOLD,

@@ -96,7 +96,7 @@ class ProjectServiceTest {
     void getProjectById_ShouldReturnProject() {
         when(projectRepository.findById(project.getId())).thenReturn(Optional.of(project));
 
-        Project result = projectService.getProjectById(project.getId(), project.getOwnerId());
+        Project result = projectService.getProjectById(project.getId());
 
         assertNotNull(result);
         assertEquals("Test Project", result.getName());
@@ -108,7 +108,7 @@ class ProjectServiceTest {
         when(projectRepository.findById(project.getId())).thenReturn(Optional.empty());
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> projectService.getProjectById(project.getId(), project.getOwnerId()));
+                () -> projectService.getProjectById(project.getId()));
 
         assertEquals("Project not found", exception.getMessage());
     }

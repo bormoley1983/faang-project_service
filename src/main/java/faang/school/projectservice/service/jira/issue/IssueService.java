@@ -8,10 +8,9 @@ import com.atlassian.jira.rest.client.api.domain.SearchResult;
 import com.atlassian.jira.rest.client.api.domain.input.IssueInput;
 import faang.school.projectservice.client.jira.JiraClient;
 import faang.school.projectservice.dto.jira.issue.IssueFilterDto;
-import faang.school.projectservice.filters.jira.issue.IssueFilter;
+import faang.school.projectservice.utils.parser.JqlParser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,7 +22,7 @@ import java.util.stream.StreamSupport;
 @Service
 public class IssueService {
     private final JiraClient jiraClient;
-    private final List<IssueFilter> issueFilters;
+    private final JqlParser jqlParser;
 
     public Issue createIssue(IssueInput issueInput) {
         log.info("Starting creation of issue with input: {}", issueInput);
@@ -51,13 +50,10 @@ public class IssueService {
         log.info("Fetching issues with filters: {}", filters);
         SearchRestClient searchClient = jiraClient.getSearchClient();
 
-        String jql = buildJql(filters);
+        String jql = jqlParser.buildJql(filters);
         SearchResult result = searchClient.searchJql(jql).claim();
 
-        List<Issue> issues = StreamSupport.stream(
-                result.getIssues().spliterator(),
-                false
-        ).toList();
+        List<Issue> issues = StreamSupport.stream(result.getIssues().spliterator(), false).toList();
 
         log.debug("Founded issues {}", issues);
 
@@ -73,18 +69,5 @@ public class IssueService {
         log.debug("Retrieved issue {} details: {}", issueKey, issue);
 
         return issue;
-    }
-
-    private String buildJql(IssueFilterDto filters) {
-        log.debug("Building JQL for filters: {}", filters);
-
-        String jql = issueFilters.stream()
-                .filter(filter -> filter.isApplicable(filters))
-                .map(filter -> filter.getJql(filters))
-                .collect(Collectors.joining(" AND "));
-
-        log.debug("Final JQL query: {}", jql);
-
-        return jql;
     }
 }

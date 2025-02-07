@@ -9,7 +9,7 @@ import com.atlassian.jira.rest.client.api.domain.input.IssueInput;
 import com.atlassian.jira.rest.client.api.domain.input.IssueInputBuilder;
 import faang.school.projectservice.client.jira.JiraClient;
 import faang.school.projectservice.dto.jira.issue.IssueFilterDto;
-import faang.school.projectservice.filters.jira.issue.IssueFilter;
+import faang.school.projectservice.utils.parser.JqlParser;
 import io.atlassian.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,9 +20,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -38,7 +38,7 @@ public class IssueServiceTest {
     private JiraClient jiraClient;
 
     @Mock
-    private List<IssueFilter> issueFilters;
+    private JqlParser jqlParser;
 
     @Mock
     private IssueRestClient issueRestClient;
@@ -121,6 +121,7 @@ public class IssueServiceTest {
         SearchResult searchResult = new SearchResult(1, 1, 1, issueIterable);
 
         when(jiraClient.getSearchClient()).thenReturn(searchRestClient);
+        when(jqlParser.buildJql(any(IssueFilterDto.class))).thenReturn("");
         when(searchRestClient.searchJql(anyString())).thenReturn(searchResultPromise);
         when(searchResultPromise.claim()).thenReturn(searchResult);
 

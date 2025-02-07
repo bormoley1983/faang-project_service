@@ -131,6 +131,12 @@ tasks.jacocoTestCoverageVerification {
     }
 }
 
+tasks.test {
+    useJUnitPlatform {
+        excludeTags("integration")
+    }
+}
+
 tasks.withType<Test> {
     useJUnitPlatform()
 }

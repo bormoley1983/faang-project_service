@@ -28,50 +28,32 @@ public class IssueController {
     private final IssueMapper issueMapper;
 
     @PostMapping("/issue/{projectKey}")
-    public ResponseEntity<IssueDto> createIssue(
-            @PathVariable String projectKey,
-            @Valid @RequestBody IssueDto requestIssueDto) {
-
+    public ResponseEntity<IssueDto> createIssue(@PathVariable String projectKey, @Valid @RequestBody IssueDto requestIssueDto) {
         IssueInput requestIssueInput = issueMapper.toIssueInput(projectKey, requestIssueDto);
-
         Issue responseIssue = issueService.createIssue(requestIssueInput);
-
         IssueDto responseIssueDto = issueMapper.toDto(responseIssue);
-
         return ResponseEntity.ok(responseIssueDto);
     }
 
     @PutMapping("/issue/{issueKey}")
-    public ResponseEntity<IssueDto> updateIssue(
-            @PathVariable String issueKey,
-            @Valid @RequestBody IssueDto requestIssueDto) {
-
+    public ResponseEntity<IssueDto> updateIssue(@PathVariable String issueKey, @Valid @RequestBody IssueDto requestIssueDto) {
         IssueInput requestIssueInput = issueMapper.toIssueInput(requestIssueDto);
-
         Issue responseIssue = issueService.updateIssue(issueKey, requestIssueInput);
-
         IssueDto responseIssueDto = issueMapper.toDto(responseIssue);
-
         return ResponseEntity.ok(responseIssueDto);
     }
 
     @PostMapping("/issue")
-    public ResponseEntity<List<IssueDto>> getAllIssues(
-            @RequestBody(required = false) IssueFilterDto filters) {
-
+    public ResponseEntity<List<IssueDto>> getAllIssues(@RequestBody(required = false) IssueFilterDto filters) {
         List<Issue> responseIssues = issueService.getAllIssues(filters);
-
         List<IssueDto> responseIssuesDto = issueMapper.toDto(responseIssues);
-
         return ResponseEntity.ok(responseIssuesDto);
     }
 
     @GetMapping("/issue/{issueKey}")
     public ResponseEntity<IssueDto> getIssueByKey(String issueKey) {
         Issue responseIssue = issueService.getIssueByKey(issueKey);
-
         IssueDto responseIssueDto = issueMapper.toDto(responseIssue);
-
         return ResponseEntity.ok(responseIssueDto);
     }
 }

@@ -14,8 +14,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
-
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/reports")
@@ -26,34 +24,22 @@ public class ProjectReportController {
     @PostMapping("/generate/{projectId}")
     public ResponseEntity<Resource> generateReport(@PathVariable Long projectId) {
         log.info("Generating report for projectId: {}", projectId);
-
-            ProjectReport projectReport = projectReportService.createProjectReport(projectId);
-            Resource resource = projectReportService.getUrlResource(projectReport);
-        try {
+        ProjectReport projectReport = projectReportService.createProjectReport(projectId);
+        Resource resource = projectReportService.getUrlResource(projectReport);
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_PDF)
-                    .contentLength(resource.contentLength())
+                    .contentLength(projectReportService.getContentLength(resource))
                     .body(resource);
-        } catch (IOException e) {
-            throw new RuntimeException("Error reading file: ", e);
-        }
     }
 
     @GetMapping("/{projectId}")
     public ResponseEntity<Resource> getReport(@PathVariable Long projectId) {
         log.info("Fetching report for projectId: {}", projectId);
-
         ProjectReport projectReport = projectReportService.getProjectReport(projectId);
         Resource resource = projectReportService.getUrlResource(projectReport);
-
-        try {
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_PDF)
-                    .contentLength(resource.contentLength())
+                    .contentLength(projectReportService.getContentLength(resource))
                     .body(resource);
-        } catch (IOException e) {
-            log.error("Error reading file for projectId: {}", projectId, e);
-            throw new RuntimeException("Error reading file: ", e);
-        }
     }
 }

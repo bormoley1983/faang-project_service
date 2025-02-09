@@ -1,5 +1,6 @@
 package faang.school.projectservice.service;
 
+import faang.school.projectservice.exseption.ErrorReadingFile;
 import faang.school.projectservice.exseption.ProjectNotFoundException;
 import faang.school.projectservice.model.Project;
 import faang.school.projectservice.model.ProjectReport;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 
@@ -72,5 +74,13 @@ public class ProjectReportService {
             throw new RuntimeException("Error URL file: {} " + fileUri, e);
         }
         return resource;
+    }
+
+    public long getContentLength(Resource resource) {
+        try {
+            return resource.contentLength();
+        } catch (IOException e) {
+            throw new ErrorReadingFile("Error reading content length", e);
+        }
     }
 }

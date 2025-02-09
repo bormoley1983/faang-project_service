@@ -3,7 +3,6 @@ package faang.school.projectservice.repository;
 import faang.school.projectservice.model.ProjectReport;
 import feign.Param;
 import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 
 import java.util.Optional;
@@ -13,6 +12,5 @@ public interface ProjectReportRepository extends CrudRepository<ProjectReport, L
     Optional<ProjectReport> getReportByProjectId(Long projectId);
 
     @Modifying
-    @Query("DELETE FROM ProjectReport pr WHERE pr.projectId = :projectId")
     void deleteReportByProjectId(@Param("projectId") Long projectId);
 }

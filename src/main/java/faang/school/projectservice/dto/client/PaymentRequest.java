@@ -1,21 +1,19 @@
 package faang.school.projectservice.dto.client;
 
-import java.math.BigDecimal;
-
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
-public record PaymentRequest (
-        Long paymentNumber,
+import java.math.BigDecimal;
+
+public record PaymentRequest(
+        @NotNull
+        long paymentNumber,
 
         @Min(1)
         @NotNull
         BigDecimal amount,
 
         @NotNull
-        Currency paymentCurrency,
-
-        @NotNull
-        Currency targetCurrency
+        Currency currency
 ) {
 }

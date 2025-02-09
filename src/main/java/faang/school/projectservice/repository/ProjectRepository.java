@@ -20,6 +20,14 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     )
     boolean existsByOwnerIdAndName(Long ownerId, String name);
 
+    @Query(
+            "SELECT DISTINCT tm.userId " +
+                    "FROM TeamMember tm " +
+                    "JOIN tm.team t " +
+                    "WHERE t.project.id IN :projectIds"
+    )
+    List<Long> getUserIdsByProjectIds(List<Long> projectIds);
+
     @Query("SELECT tm.id FROM TeamMember tm " +
             "JOIN tm.team t " +
             "JOIN t.project p " +
@@ -29,5 +37,7 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     @Query("SELECT p FROM Project p WHERE p.parentProject.id = :parentProjectId")
     Page<Project> findByParentProjectId(Long parentProjectId, Pageable pageable);
 
+    @Query("SELECT p FROM Project p WHERE p.googleCalendarId = :googleCalendarId")
+    Project findByGoogleCalendarId(String googleCalendarId);
 }
 

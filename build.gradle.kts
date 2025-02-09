@@ -1,6 +1,6 @@
 plugins {
     java
-    id("org.springframework.boot") version "3.0.6"
+    id("org.springframework.boot") version "3.1.0"
     id("io.spring.dependency-management") version "1.1.0"
     id("jacoco")
 }
@@ -11,9 +11,19 @@ java.sourceCompatibility = JavaVersion.VERSION_17
 
 repositories {
     mavenCentral()
+    maven {
+        name = "atlassian-public"
+        url = uri("https://packages.atlassian.com/maven/repository/public")
+    }
 }
 
 dependencies {
+    /**
+     * Google calendar API
+     */
+    implementation("com.google.auth:google-auth-library-oauth2-http:1.31.0")
+    implementation("com.google.api-client:google-api-client:2.7.2")
+    implementation("com.google.apis:google-api-services-calendar:v3-rev20250115-2.0.0")
     /**
      * Spring boot starters
      */
@@ -61,7 +71,10 @@ dependencies {
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
     testImplementation("com.redis.testcontainers:testcontainers-redis-junit-jupiter:1.4.6")
-
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.2")
+    testImplementation("org.testcontainers:junit-jupiter:1.19.0")
     /**
      * Tests
      */
@@ -70,6 +83,16 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.1")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.7.1")
+
+    /**
+     * Jira
+     */
+    implementation("com.atlassian.jira:jira-rest-java-client-core:5.2.4") {
+        exclude(group = "org.glassfish.jersey.core", module = "jersey-common")
+    }
+    implementation("com.atlassian.jira:jira-rest-java-client-api:6.0.1")
+    implementation("org.glassfish.jersey.core:jersey-common:2.27")
+    implementation("io.atlassian.fugue:fugue:5.0.2")
 }
 
 jacoco {
@@ -84,10 +107,15 @@ tasks.jacocoTestReport {
         csv.required.set(false)
     }
 
+    sourceSets {
+        named("test") {
+            java.srcDirs("src/test/java")
+            resources.srcDirs("src/test/resources")
+        }
+    }
     classDirectories.setFrom(
         fileTree(project.buildDir.resolve("classes/java/main")) {
-            include("**/service/VacancyService.class")
-            include("**/service/ValidateService.class")
+            include("**/service/**")
         }
     )
 
@@ -99,19 +127,27 @@ tasks.jacocoTestCoverageVerification {
 
     classDirectories.setFrom(
         fileTree(project.buildDir.resolve("classes/java/main")) {
-            include("**/service/VacancyService.class")
-            include("**/service/ValidateService.class")
+            include("**/service/**)")
         }
     )
 
-    violationRules {
-        rule {
-            limit {
-                counter = "LINE"
-                value = "COVEREDRATIO"
-                minimum = 0.70.toBigDecimal()
+    tasks.processTestResources {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        violationRules {
+            rule {
+                limit {
+                    counter = "LINE"
+                    value = "COVEREDRATIO"
+                    minimum = 0.70.toBigDecimal()
+                }
             }
         }
+    }
+}
+
+tasks.test {
+    useJUnitPlatform {
+        excludeTags("integration")
     }
 }
 

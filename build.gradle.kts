@@ -19,6 +19,12 @@ repositories {
 
 dependencies {
     /**
+     * Google calendar API
+     */
+    implementation("com.google.auth:google-auth-library-oauth2-http:1.31.0")
+    implementation("com.google.api-client:google-api-client:2.7.2")
+    implementation("com.google.apis:google-api-services-calendar:v3-rev20250115-2.0.0")
+    /**
      * Spring boot starters
      */
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")

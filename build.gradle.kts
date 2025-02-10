@@ -29,9 +29,15 @@ dependencies {
      */
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-freemarker")
+    implementation("io.vertx:vertx-web-templ-freemarker:4.4.0")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.cloud:spring-cloud-starter-openfeign:4.0.2")
+    implementation("com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10")
+    implementation("org.springframework.boot:spring-boot-starter-freemarker")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+    implementation("org.xhtmlrenderer:flying-saucer-pdf-openpdf:9.1.22")
+    implementation("com.github.librepdf:openpdf:1.3.30")
 
     /**
      * Database
@@ -44,6 +50,8 @@ dependencies {
      * Amazon S3
      */
     implementation("com.amazonaws:aws-java-sdk-s3:1.12.481")
+    implementation("org.apache.pdfbox:pdfbox:2.0.27")
+    implementation("io.minio:minio:8.3.4")
 
     /**
      * Utils & Logging

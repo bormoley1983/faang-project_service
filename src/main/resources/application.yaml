@@ -36,12 +36,13 @@ calculations_messages_processing:
   enabled: true
 
 services:
-  s3:
+  minio:
     endpoint: http://localhost:9000
-    accessKey: user
-    secretKey: password
-    bucketName: projectbucket
+    access-key: user
+    secret-key: password
+    bucket-name: corpbucket
     isMocked: false
+
   payment-service:
     host: http://localhost
     port: 9080

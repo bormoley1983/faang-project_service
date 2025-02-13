@@ -1,0 +1,181 @@
+package faang.school.projectservice.service.resource;
+
+import faang.school.projectservice.dto.resource.S3FileDto;
+import faang.school.projectservice.exception.AccessDeniedException;
+import faang.school.projectservice.exception.DataNotFoundException;
+import faang.school.projectservice.exception.FileException;
+import faang.school.projectservice.model.Project;
+import faang.school.projectservice.model.Resource;
+import faang.school.projectservice.model.ResourceStatus;
+import faang.school.projectservice.model.ResourceType;
+import faang.school.projectservice.model.TeamMember;
+import faang.school.projectservice.model.TeamRole;
+import faang.school.projectservice.repository.ProjectRepository;
+import faang.school.projectservice.repository.ResourceRepository;
+import faang.school.projectservice.repository.TeamMemberRepository;
+import faang.school.projectservice.service.s3.S3Service;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.math.BigInteger;
+import java.util.List;
+import java.util.Optional;
+
+import static faang.school.projectservice.service.resource.ResourceErrorMessage.FILE_SIZE_EXCEED_STORAGE_VALUE;
+import static faang.school.projectservice.service.resource.ResourceErrorMessage.INVALID_FILE_EXTENSION;
+import static faang.school.projectservice.service.resource.ResourceErrorMessage.MEMBER_NOT_HAVE_AUTHORITY;
+import static faang.school.projectservice.service.resource.ResourceErrorMessage.NOT_FOUND_PROJECT;
+import static faang.school.projectservice.service.resource.ResourceErrorMessage.NOT_FOUND_RESOURCE;
+import static faang.school.projectservice.service.resource.ResourceErrorMessage.NOT_FOUND_TEAM_MEMBER;
+import static faang.school.projectservice.service.resource.ResourceErrorMessage.RESOURCE_ALREADY_DELETED;
+
+
+@RequiredArgsConstructor
+@Service
+public class ResourceService {
+    private final S3Service s3Service;
+
+    private final ResourceRepository resourceRepository;
+    private final ProjectRepository projectRepository;
+    private final TeamMemberRepository teamMemberRepository;
+
+    private final String folderPattern = "%s-%s";
+
+    @Transactional
+    public Resource addResource(Long projectId, Long userId, MultipartFile file) {
+        Project project = getProjectById(projectId);
+        TeamMember member = getTeamMember(userId, projectId);
+        ResourceType fileContentType = ResourceType.getResourceType(file.getContentType());
+
+        if (fileContentType == ResourceType.NONE ||
+                fileContentType == ResourceType.OTHER) {
+            throw new FileException(INVALID_FILE_EXTENSION);
+        }
+        BigInteger newStorageSize = calculateStorageSize(project, file.getSize());
+        String folder = String.format(folderPattern, projectId, project.getName());
+
+        Resource resource = s3Service.uploadFile(file, folder);
+        resource.setName(file.getOriginalFilename());
+        resource.setProject(project);
+        resource.setCreatedBy(member);
+        resource.setUpdatedBy(member);
+        resource.setAllowedRoles(List.copyOf(member.getRoles()));
+        resource = resourceRepository.save(resource);
+
+        updateStorageSize(newStorageSize, project);
+        return resource;
+    }
+
+    @Transactional
+    public Resource updateResource(Long resourceId, Long projectId, Long userId, MultipartFile file) {
+        Project project = getProjectById(projectId);
+        TeamMember member = getTeamMember(userId, projectId);
+        Resource oldResource = getResourceById(resourceId);
+
+        ResourceType fileContentType = ResourceType.getResourceType(file.getContentType());
+
+        if (oldResource.getType() != fileContentType) {
+            throw new FileException(INVALID_FILE_EXTENSION);
+        }
+
+        validateAccessRights(member, oldResource);
+
+        long sizeDifference = file.getSize() - oldResource.getSize().longValue();
+        BigInteger newStorageSize = calculateStorageSize(project, sizeDifference);
+        String folder = String.format(folderPattern, projectId, project.getName());
+
+        s3Service.deleteFile(oldResource.getKey());
+        Resource newResource = s3Service.uploadFile(file, folder);
+
+        oldResource.setKey(newResource.getKey());
+        oldResource.setUpdatedBy(member);
+        oldResource = resourceRepository.save(oldResource);
+
+        updateStorageSize(newStorageSize, project);
+        return oldResource;
+    }
+
+    @Transactional
+    public void deleteResource(Long resourceId, Long projectId, Long userId) {
+        Project project = getProjectById(projectId);
+        TeamMember member = getTeamMember(userId, projectId);
+        Resource resource = getResourceById(resourceId);
+
+        if (!(resource.getCreatedBy().equals(member) ||
+                member.getRoles().contains(TeamRole.MANAGER))) {
+            throw new AccessDeniedException(MEMBER_NOT_HAVE_AUTHORITY);
+        }
+
+        s3Service.deleteFile(resource.getKey());
+
+        BigInteger newStorageSize = calculateStorageSize(project, resource.getSize().negate().longValue());
+        updateStorageSize(newStorageSize, project);
+
+        resource.setKey(null);
+        resource.setSize(null);
+        resource.setStatus(ResourceStatus.DELETED);
+        resource.setUpdatedBy(member);
+        resourceRepository.save(resource);
+    }
+
+    @Transactional(readOnly = true)
+    public S3FileDto downloadResource(Long resourceId, Long projectId, Long userId) {
+        Project project = getProjectById(projectId);
+        TeamMember member = getTeamMember(userId, projectId);
+        Resource resource = getResourceById(resourceId);
+
+        validateAccessRights(member, resource);
+
+        return s3Service.downloadFile(resource.getKey());
+    }
+
+    private BigInteger calculateStorageSize(Project project, Long fileSize) {
+        BigInteger newStorageSize = project.getStorageSize().add(BigInteger.valueOf(fileSize));
+
+        if (newStorageSize.compareTo(project.getMaxStorageSize()) > 0) {
+            throw new FileException(String.format(FILE_SIZE_EXCEED_STORAGE_VALUE,
+                    newStorageSize, project.getMaxStorageSize()));
+        }
+        return newStorageSize;
+    }
+
+    private void updateStorageSize(BigInteger newStorageSize, Project project) {
+        project.setStorageSize(newStorageSize);
+        projectRepository.save(project);
+    }
+
+    private void validateAccessRights(TeamMember member, Resource resource) {
+        boolean hasRequiredRole = resource.getCreatedBy().equals(member) ||
+                member.getRoles().contains(TeamRole.MANAGER) ||
+                member.getRoles().stream()
+                        .anyMatch(role -> resource.getAllowedRoles().contains(role));
+
+        if (!hasRequiredRole) {
+            throw new AccessDeniedException(MEMBER_NOT_HAVE_AUTHORITY);
+        }
+    }
+
+    private Project getProjectById(Long projectId) {
+        return projectRepository.findById(projectId)
+                .orElseThrow(() -> new DataNotFoundException(String.format(NOT_FOUND_PROJECT, projectId)));
+    }
+
+    private TeamMember getTeamMember(Long userId, Long projectId) {
+        return Optional.ofNullable(teamMemberRepository.findByUserIdAndProjectId(userId, projectId))
+                .orElseThrow(() -> new DataNotFoundException(String.format(NOT_FOUND_TEAM_MEMBER, userId)));
+    }
+
+    private Resource getResourceById(Long resourceId) {
+        Resource resource = resourceRepository.findById(resourceId)
+                .orElseThrow(() -> new DataNotFoundException(String.format(NOT_FOUND_RESOURCE, resourceId)));
+
+        if (resource.getStatus() == ResourceStatus.DELETED) {
+            throw new DataNotFoundException(String.format(RESOURCE_ALREADY_DELETED,
+                    resource.getUpdatedAt().toString()));
+        }
+
+        return resource;
+    }
+}

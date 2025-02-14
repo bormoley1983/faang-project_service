@@ -43,6 +43,10 @@ public class Internship {
     @NotNull
     private TeamMember mentorId;
 
+    @Column(name = "role")
+    @Enumerated(EnumType.STRING)
+    private TeamRole role;
+
     @ManyToMany
     @JoinTable(
             name = "internship_interns",

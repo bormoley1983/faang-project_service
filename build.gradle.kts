@@ -93,6 +93,11 @@ dependencies {
     implementation("com.atlassian.jira:jira-rest-java-client-api:6.0.1")
     implementation("org.glassfish.jersey.core:jersey-common:2.27")
     implementation("io.atlassian.fugue:fugue:5.0.2")
+
+    /**
+     * Swagger
+     */
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
 }
 
 jacoco {

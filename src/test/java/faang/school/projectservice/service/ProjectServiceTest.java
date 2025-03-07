@@ -1,25 +1,31 @@
 package faang.school.projectservice.service;
 
-import faang.school.projectservice.model.Meet;
+import faang.school.projectservice.config.ProjectProperties;
 import faang.school.projectservice.model.Project;
 import faang.school.projectservice.model.ProjectStatus;
+import faang.school.projectservice.model.Resource;
 import faang.school.projectservice.repository.ProjectRepository;
 import faang.school.projectservice.service.google.GoogleCalendarService;
+import faang.school.projectservice.service.s3.S3Service;
+import faang.school.projectservice.validator.FileValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -36,10 +42,19 @@ class ProjectServiceTest {
     private GoogleCalendarService googleCalendarService;
 
     @Mock
-    private ProjectScheduleService projectScheduleService;
+    private S3Service s3Service;
 
     @Mock
-    private ProjectMeetService projectMeetService;
+    private FileValidator fileValidator;
+
+    @Mock
+    private ImageResizer imageResizer;
+
+    @Mock
+    private MultipartFile file;
+
+    @Spy
+    private ProjectProperties projectProperties;
 
     @InjectMocks
     private ProjectService projectService;
@@ -56,7 +71,6 @@ class ProjectServiceTest {
                 .status(ProjectStatus.CREATED)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
-                //.meets(List.of(new Meet()))
                 .build();
     }
 
@@ -127,5 +141,75 @@ class ProjectServiceTest {
                 () -> projectService.getProjectById(project.getId()));
 
         assertEquals("Project not found", exception.getMessage());
+    }
+
+    @Test
+    void testUploadProjectCover_Success() throws IOException {
+        byte[] mockImageBytes = new byte[]{1, 2, 3};
+        byte[] mockResizedImageBytes = new byte[]{4, 5, 6};
+
+        when(file.getBytes()).thenReturn(mockImageBytes);
+        when(projectProperties.getTargetWidth()).thenReturn(1080);
+        when(projectProperties.getTargetHeight()).thenReturn(566);
+        when(imageResizer.resizeImage(mockImageBytes, 1080, 566))
+                .thenReturn(mockResizedImageBytes);
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+        when(s3Service.uploadFile(any(), anyString())).thenReturn(new Resource());
+
+        projectService.uploadProjectCover(1L, file);
+
+        verify(fileValidator).validateFile(file);
+        verify(imageResizer).resizeImage(mockImageBytes, 1080, 566);
+        verify(s3Service).uploadFile(any(), anyString());
+        verify(projectRepository).save(project);
+    }
+
+    @Test
+    void uploadProjectCover_ProjectNotFound() {
+        when(projectRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class, () -> projectService.uploadProjectCover(1L, file));
+    }
+
+    @Test
+    void uploadProjectCover_CoverAlreadyExists() {
+        project.setCoverImageId("existing-cover-key");
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+
+        assertThrows(IllegalStateException.class, () -> projectService.uploadProjectCover(1L, file));
+    }
+
+    @Test
+    void uploadProjectCover_IOException() throws IOException {
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+        when(file.getBytes()).thenThrow(IOException.class);
+
+        assertThrows(RuntimeException.class, () -> projectService.uploadProjectCover(1L, file));
+    }
+
+    @Test
+    void deleteCover_Success() {
+        project.setCoverImageId("cover-key");
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+
+        projectService.deleteCover(1L);
+
+        verify(s3Service).deleteFile("cover-key");
+        assertNull(project.getCoverImageId());
+    }
+
+    @Test
+    void deleteCover_ProjectNotFound() {
+        when(projectRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class, () -> projectService.deleteCover(1L));
+    }
+
+    @Test
+    void deleteCover_CoverDoesNotExist() {
+        project.setCoverImageId(null);
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+
+        assertThrows(IllegalStateException.class, () -> projectService.deleteCover(1L));
     }
 }

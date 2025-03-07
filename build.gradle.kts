@@ -93,6 +93,11 @@ dependencies {
     implementation("com.atlassian.jira:jira-rest-java-client-api:6.0.1")
     implementation("org.glassfish.jersey.core:jersey-common:2.27")
     implementation("io.atlassian.fugue:fugue:5.0.2")
+    /**
+     * Imgscalr
+     */
+    implementation("org.imgscalr:imgscalr-lib:4.2")
+
 
     /**
      * Swagger

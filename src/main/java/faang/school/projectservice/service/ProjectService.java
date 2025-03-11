@@ -1,21 +1,25 @@
 package faang.school.projectservice.service;
 
 import com.google.api.services.calendar.model.Calendar;
+import faang.school.projectservice.config.ProjectProperties;
 import faang.school.projectservice.model.Meet;
 import faang.school.projectservice.model.Project;
 import faang.school.projectservice.model.ProjectStatus;
 import faang.school.projectservice.model.ProjectVisibility;
+import faang.school.projectservice.model.Resource;
 import faang.school.projectservice.model.Schedule;
 import faang.school.projectservice.repository.ProjectRepository;
 import faang.school.projectservice.service.google.GoogleCalendarService;
+import faang.school.projectservice.service.s3.S3Service;
+import faang.school.projectservice.validator.FileValidator;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -30,8 +34,10 @@ public class ProjectService {
     private final GoogleCalendarService googleCalendarService;
     private final ProjectScheduleService projectScheduleService;
     private final ProjectMeetService projectMeetService;
-
-    private static final Logger logger = LoggerFactory.getLogger(ProjectService.class);
+    private final S3Service s3Service;
+    private final ProjectProperties projectProperties;
+    private final FileValidator fileValidator;
+    private final ImageResizer imageResizer;
 
     @Transactional
     public Project createProject(Project project, Long ownerId) {
@@ -183,5 +189,50 @@ public class ProjectService {
                 .forEach(meet -> projectMeetService.deleteMeetEvent(googleCalendarId, meet.getGoogleEventId()));
 
         project.setMeets(meets);
+    }
+
+    @Transactional
+    public void uploadProjectCover(Long projectId, MultipartFile file) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new IllegalArgumentException("Project not found"));
+
+        if (project.getCoverImageId() != null) {
+            throw new IllegalStateException("Project cover already exists. " +
+                    "Delete the existing cover before uploading a new one.");
+        }
+
+        fileValidator.validateFile(file);
+
+        byte[] imageBytes;
+        try {
+            imageBytes = file.getBytes();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        byte[] resizedImageBytes = imageResizer.resizeImage(
+                imageBytes,
+                projectProperties.getTargetWidth(),
+                projectProperties.getTargetHeight());
+
+        MultipartFile resizedFile = new ResizedMultipartFile(file, resizedImageBytes);
+        Resource resource = s3Service.uploadFile(resizedFile, "covers");
+
+        project.setCoverImageId(resource.getKey());
+        projectRepository.save(project);
+    }
+
+    @Transactional
+    public void deleteCover(Long projectId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new IllegalArgumentException("Project not found"));
+
+        if (project.getCoverImageId() != null) {
+            s3Service.deleteFile(project.getCoverImageId());
+            project.setCoverImageId(null);
+            projectRepository.save(project);
+        } else {
+            throw new IllegalStateException("Project cover does not exist. Nothing to delete.");
+        }
     }
 }

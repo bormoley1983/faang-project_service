@@ -1,6 +1,6 @@
 package faang.school.projectservice.service;
 
-import faang.school.projectservice.client.UserServiceClient;
+import faang.school.projectservice.client.feign.UserServiceClient;
 import faang.school.projectservice.dto.client.UserDto;
 import faang.school.projectservice.model.Project;
 import faang.school.projectservice.model.ProjectStatus;
@@ -12,6 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -32,7 +33,8 @@ public class PdfReportGeneratorServiceTest {
     void testGenerateProjectReport() throws Exception {
 
         UserDto dummyUser = new UserDto(1L,"Oleg","king@gmail.com");
-        when(userServiceClient.getUser(1L)).thenReturn(dummyUser);
+        ResponseEntity<UserDto> responseEntity = ResponseEntity.ok(dummyUser);
+        when(userServiceClient.getUser(1L)).thenReturn(responseEntity);
 
         Project project = Project.builder()
                 .id(1L)

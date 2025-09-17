@@ -1,9 +1,5 @@
 package faang.school.projectservice.model;
 
-import java.math.BigInteger;
-import java.time.LocalDateTime;
-import java.util.List;
-
 import faang.school.projectservice.model.stage.Stage;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
@@ -26,14 +22,20 @@ import jakarta.persistence.Temporal;
 import jakarta.persistence.TemporalType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigInteger;
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Entity
 @Table(name = "project")
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder

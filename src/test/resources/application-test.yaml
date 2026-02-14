@@ -33,6 +33,11 @@ services:
   user-service:
     host: http://localhost
     port: 8080
+  s3:
+    endpoint: http://localhost:9000
+    access-key: test-access-key
+    secret-key: test-secret-key
+    bucket-name: test-bucket
 
   logging:
     level:

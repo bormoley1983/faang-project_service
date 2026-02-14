@@ -122,7 +122,6 @@ public class ResourceService {
 
     @Transactional(readOnly = true)
     public S3FileDto downloadResource(Long resourceId, Long projectId, Long userId) {
-        Project project = getProjectById(projectId);
         TeamMember member = getTeamMember(userId, projectId);
         Resource resource = getResourceById(resourceId);
 

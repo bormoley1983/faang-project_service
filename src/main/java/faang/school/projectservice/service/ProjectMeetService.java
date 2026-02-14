@@ -6,11 +6,8 @@ import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.EventAttendee;
 import com.google.api.services.calendar.model.EventDateTime;
 import faang.school.projectservice.model.Meet;
-import faang.school.projectservice.repository.MeetRepository;
 import faang.school.projectservice.service.google.GoogleCalendarService;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -22,9 +19,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProjectMeetService {
     private final GoogleCalendarService googleCalendarService;
-    private final MeetRepository meetRepository;
-
-    private static final Logger logger = LoggerFactory.getLogger(ProjectMeetService.class);
 
     public void createMeetEvent(String calendarId, Meet meet) {
         Event event = new Event();

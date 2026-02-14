@@ -95,7 +95,6 @@ public class ProjectController {
 
     @GetMapping("/{projectId}")
     public ResponseEntity<ProjectResponseDto> getProjectById(@PathVariable Long projectId) {
-        Long userId = userContext.getUserId();
         Project project = projectService.getProjectById(projectId);
         return ResponseEntity.ok(projectMapper.toDto(project));
     }

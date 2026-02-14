@@ -2,7 +2,6 @@ package faang.school.projectservice.service;
 
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import faang.school.projectservice.client.feign.UserServiceClient;
-import faang.school.projectservice.dto.client.UserDto;
 import faang.school.projectservice.model.Project;
 import faang.school.projectservice.model.TaskStatus;
 import feign.FeignException;
@@ -66,7 +65,6 @@ public class PdfReportGeneratorService {
     private static void renderPdf(String html, OutputStream outputStream) throws Exception {
         try (outputStream) {
             PdfRendererBuilder builder = new PdfRendererBuilder();
-            builder.useFastMode();
             builder.withHtmlContent(html, null);
             builder.toStream(outputStream);
             builder.run();

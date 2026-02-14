@@ -245,7 +245,6 @@ public class ResourceServiceTest {
 
     @Test
     void testDownloadResourceSuccess() {
-        when(projectRepository.findById(projectId)).thenReturn(Optional.of(project));
         when(teamMemberRepository.findByUserIdAndProjectId(userId, projectId)).thenReturn(member);
         when(resourceRepository.findById(resourceId)).thenReturn(Optional.of(resource));
         when(s3Service.downloadFile(anyString())).thenReturn(new S3FileDto());
@@ -262,7 +261,6 @@ public class ResourceServiceTest {
         nonManager.setId(2L);
         nonManager.setRoles(List.of(TeamRole.DEVELOPER));
 
-        when(projectRepository.findById(projectId)).thenReturn(Optional.of(project));
         when(teamMemberRepository.findByUserIdAndProjectId(userId, projectId)).thenReturn(nonManager);
         when(resourceRepository.findById(resourceId)).thenReturn(Optional.of(resource));
 
@@ -276,7 +274,6 @@ public class ResourceServiceTest {
 
     @Test
     void testDownloadResourceFileNotFound() {
-        when(projectRepository.findById(projectId)).thenReturn(Optional.of(project));
         when(teamMemberRepository.findByUserIdAndProjectId(userId, projectId)).thenReturn(member);
         when(resourceRepository.findById(resourceId)).thenReturn(Optional.empty());
 

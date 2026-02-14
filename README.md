@@ -1,103 +1,72 @@
-# Service Template
+# Project Service
+Service responsible for managing projects, team members, vacancies, and related business logic.
 
-Стандартный шаблон проекта на SpringBoot
+## Quick start
 
-# Использованные технологии
+Prerequisites:
+- Java 21+ (JDK)
+- Docker (for container runs)
+- [faang-infra services](https://github.com/bormoley1983/faang-infra) running locally or accessible
 
-* [Spring Boot](https://spring.io/projects/spring-boot) – как основной фрэймворк
-* [PostgreSQL](https://www.postgresql.org/) – как основная реляционная база данных
-* [Redis](https://redis.io/) – как кэш и очередь сообщений через pub/sub
-* [testcontainers](https://testcontainers.com/) – для изолированного тестирования с базой данных
-* [Liquibase](https://www.liquibase.org/) – для ведения миграций схемы БД
-* [Gradle](https://gradle.org/) – как система сборки приложения
-
-# База данных
-
-* База поднимается в отдельном сервисе [infra](../infra)
-* Redis поднимается в единственном инстансе тоже в [infra](../infra)
-* Liquibase сам накатывает нужные миграции на голый PostgreSql при старте приложения
-* В тестах используется [testcontainers](https://testcontainers.com/), в котором тоже запускается отдельный инстанс
-  postgres
-* В коде продемонстрирована работа как с JdbcTemplate, так и с JPA (Hibernate)
-
-# Как начать разработку начиная с шаблона?
-
-1. Сначала нужно склонировать этот репозиторий
-
-```shell
-git clone https://github.com/FAANG-School/ServiceTemplate
+Run locally:
+```sh
+./gradlew bootRun
 ```
 
-2. Далее удаляем служебную директорию для git
-
-```shell
-# Переходим в корневую директорию проекта
-cd ServiceTemplate
-rm -rf .git
+Run tests:
+```sh
+./gradlew test --info
 ```
 
-3. Далее нужно создать совершенно пустой репозиторий в github/gitlab
-
-4. Создаём новый репозиторий локально и коммитим изменения
-
-```shell
-git init
-git remote add origin <link_to_repo>
-git add .
-git commit -m "<msg>"
+Build and run in Docker:
+```sh
+./gradlew build
+docker build -t project-service .
+docker run -p 8080:8080 project-service
 ```
 
-Готово, можно начинать работу!
+## Configuration
 
-# Как запустить локально?
+Main config: [src/main/resources/application.yaml](src/main/resources/application.yaml)  
+Test config: [src/test/resources/application-test.yaml](src/test/resources/application-test.yaml)
 
-Сначала нужно развернуть базу данных из директории [infra](../infra)
+### Required Configuration Properties
 
-Далее собрать gradle проект
+**Database:**
+- PostgreSQL connection settings (host, port, database name, credentials)
 
-```shell
-# Нужно запустить из корневой директории, где лежит build.gradle.kts
-gradle build
+**S3 Service:**
+- `services.s3.endpoint` - S3-compatible storage endpoint
+- `services.s3.access-key` - Access key for S3
+- `services.s3.secret-key` - Secret key for S3
+- `services.s3.bucket-name` - Bucket name for file storage
+
+**Redis:**
+- Redis connection settings for pub/sub messaging and caching
+
+### Test Configuration
+
+For running tests, ensure the following properties are configured in `application-test.yaml`:
+
+```yaml
+services:
+  s3:
+    endpoint: http://localhost:9000
+    access-key: test-access-key
+    secret-key: test-secret-key
+    bucket-name: test-bucket
 ```
 
-Запустить jar'ник
+## External Integrations
 
-```shell
-java -jar build/libs/ServiceTemplate-1.0.jar
-```
+### Jira Integration
 
-Но легче всё это делать через IDE
+To work with Jira API, pass the following headers in your requests:
+- `x-jira-username` - Jira user login
+- `x-jira-password` - Jira user password or token
+- `x-jira-base-url` - Base URL of Jira server
 
-# Код
-
-RESTful приложения калькулятор с единственным endpoint'ом, который принимает 2 числа и выдает результаты их сложения,
-вычитаяни, умножения и деления
-
-* Обычная трёхслойная
-  архитектура – [Controller](src/main/java/faang/school/servicetemplate/controller), [Service](src/main/java/faang/school/servicetemplate/service), [Repository](src/main/java/faang/school/servicetemplate/repository)
-* Слой Repository реализован и на jdbcTemplate, и на JPA (Hibernate)
-* Написан [GlobalExceptionHandler](src/main/java/faang/school/servicetemplate/controller/GlobalExceptionHandler.java)
-  который умеет возвращать ошибки в формате `{"code":"CODE", "message": "message"}`
-* Используется TTL кэширование вычислений
-  в [CalculationTtlCacheService](src/main/java/faang/school/servicetemplate/service/cache/CalculationTtlCacheService.java)
-* Реализован простой Messaging через [Redis pub/sub](https://redis.io/docs/manual/pubsub/)
-  * [Конфигурация](src/main/java/faang/school/servicetemplate/config/RedisConfig.java) –
-    сетапится [RedisTemplate](https://docs.spring.io/spring-data/redis/docs/current/api/org/springframework/data/redis/core/RedisTemplate.html) –
-    класс, для удобной работы с Redis силами Spring
-  * [Отправитель](src/main/java/faang/school/servicetemplate/service/messaging/RedisCalculationPublisher.java) – генерит
-    рандомные запросы и отправляет в очередь
-  * [Получатель](src/main/java/faang/school/servicetemplate/service/messaging/RedisCalculationSubscriber.java) –
-    получает запросы и отправляет задачи асинхронно выполняться
-    в [воркер](src/main/java/faang/school/servicetemplate/service/worker/CalculationWorker.java)
-
-# Интеграция с Jira
-
-Для работы с JIRA API необходимо передавать в заголовках запроса:
-- `x-jira-username` - логин пользователя Jira
-- `x-jira-password` - пароль пользователя Jira или Token
-- `x-jira-base-url` - базовый URL Jira-сервера
-
-Пример запроса через curl:
+Example request using curl:
 ```shell
 curl -X GET http://localhost:8080/your-endpoint \
      -H "x-jira-username: your_jira_login" \
@@ -105,18 +74,11 @@ curl -X GET http://localhost:8080/your-endpoint \
      -H "x-jira-base-url: https://your-company.atlassian.net"
 ```
 
-# Тесты
+### Redis Messaging
 
-Написаны только для единственного REST endpoint'а
-* SpringBootTest
-* MockMvc
-* Testcontainers
-* AssertJ
-* JUnit5
-* Parameterized tests
+Redis is used for pub/sub messaging patterns:
+- Configuration: [RedisConfig](src/main/java/faang/school/projectservice/config/RedisConfig.java) - sets up RedisTemplate for convenient Redis operations
+- Publishers and subscribers can be implemented for asynchronous event processing
+- TTL-based caching is supported through Redis
 
-# TODO
-
-* Dockerfile, который подключается к сети запущенной postgres в docker-compose
-* Redis connectivity
-* ...
+**Note:** Base code structure and architecture patterns are based on [FAANG School](https://github.com/faang-school) educational project.

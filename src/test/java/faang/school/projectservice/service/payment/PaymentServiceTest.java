@@ -52,7 +52,7 @@ public class PaymentServiceTest {
     @Test
     void testMakePayment_ShouldThrowException_WhenPaymentFails() {
         when(paymentServiceClient.sendPayment(any(PaymentRequest.class)))
-                .thenReturn(new ResponseEntity<>(null, HttpStatus.BAD_REQUEST));
+                .thenReturn(new ResponseEntity<>((PaymentResponse) null, HttpStatus.BAD_REQUEST));
 
         PaymentFailedException exception = assertThrows(PaymentFailedException.class,
                 () -> paymentService.makePayment(testAmount, testCurrency));

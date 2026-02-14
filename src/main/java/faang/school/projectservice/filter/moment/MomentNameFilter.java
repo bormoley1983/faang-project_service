@@ -2,10 +2,8 @@ package faang.school.projectservice.filter.moment;
 
 import faang.school.projectservice.dto.moment.MomentFilterDto;
 import faang.school.projectservice.model.Moment;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.springframework.stereotype.Component;
-
-import java.util.stream.Stream;
 
 @Component
 public class MomentNameFilter extends MomentFilter {
@@ -16,6 +14,6 @@ public class MomentNameFilter extends MomentFilter {
 
     @Override
     public boolean apply(Moment moment, MomentFilterDto filters) {
-        return StringUtils.contains(moment.getName(), filters.getNamePattern());
+        return Strings.CS.contains(moment.getName(), filters.getNamePattern());
     }
 }

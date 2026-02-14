@@ -12,7 +12,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -45,26 +44,27 @@ class SubProjectServiceTest {
     @InjectMocks
     private ProjectService projectService;
 
-    private Project parentProject;
-    private Project subProject;
+//     private Project parentProject;
+    
+//     private Project subProject;
 
     @BeforeEach
     void setUp() {
-        parentProject = Project.builder()
-                .id(1L)
-                .name("Parent Project")
-                .build();
+        // parentProject = Project.builder()
+        //         .id(1L)
+        //         .name("Parent Project")
+        //         .build();
 
-        subProject = Project.builder()
-                .id(2L)
-                .name("Sub Project")
-                .description("Sub Project Description")
-                .parentProject(parentProject)
-                .ownerId(1L)
-                .status(ProjectStatus.CREATED)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
+        // subProject = Project.builder()
+        //         .id(2L)
+        //         .name("Sub Project")
+        //         .description("Sub Project Description")
+        //         .parentProject(parentProject)
+        //         .ownerId(1L)
+        //         .status(ProjectStatus.CREATED)
+        //         .createdAt(LocalDateTime.now())
+        //         .updatedAt(LocalDateTime.now())
+        //         .build();
     }
 
     @Test

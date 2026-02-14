@@ -13,8 +13,6 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.Temporal;
-import jakarta.persistence.TemporalType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
@@ -51,11 +49,9 @@ public class Internship {
     )
     private List<TeamMember> interns;
 
-    @Temporal(TemporalType.TIMESTAMP)
     @NotNull
     private LocalDateTime startDate;
 
-    @Temporal(TemporalType.TIMESTAMP)
     private LocalDateTime endDate;
 
     @Enumerated(EnumType.STRING)
@@ -69,11 +65,9 @@ public class Internship {
     private String name;
 
     @CreationTimestamp
-    @Temporal(TemporalType.TIMESTAMP)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 

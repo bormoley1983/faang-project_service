@@ -30,35 +30,36 @@ spring:
     liquibase-schema: ${DATABASE_SCHEMA:project_service}
 
   data:
+    redis:
       host: ${REDIS_URL:host.docker.internal}
       port: ${REDIS_PORT:6379}
-      channel:
-        calculations_channel: 
-        name: ${REDIS_CALCULATIONS_CHANEL:calculations_channel}
+      channels:
+        calculations_channel:
+          name: ${REDIS_CALCULATIONS_CHANEL:calculations_channel}
 
 springdoc:
   swagger-ui:
     path: "/documentation.html"
-    enabled:  ${SWAGGERUI_ENABLED:true}
+    enabled: ${SWAGGERUI_ENABLED:true}
   api-docs:
     enabled: ${API_DOCS_ENABLED:true}
   title: "Project microservice API documentation"
   version: "latest"
-  description: "Documentation of end points for project microservice"  
+  description: "Documentation of end points for project microservice"
 
 server:
-  port: 8082
+  port: ${PROJECT_SERVICE_PORT:8082}
 
 services:
-  minio:
-    endpoint:  ${MINIO_SERVICE_HOST:http://localhost:9000}
-    access-key: user
-    secret-key: password
-    bucket-name: corpbucket
-    isMocked: false
-    max-file-size: 5MB
-    target-width: 1080
-    target-height: 566
+  s3:
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}
+    access-key: ${S3_ACCESS_KEY:user}
+    secret-key: ${S3_SECRET_KEY:password}
+    bucket-name: ${S3_BUCKET_NAME:corpbucket}
+    region: ${S3_REGION:us-east-1}
+    max-file-size: ${S3_MAX_FILE_SIZE:5MB}
+    target-width: ${S3_TARGET_WIDTH:1080}
+    target-height: ${S3_TARGET_HEIGHT:566}
 
   payment-service:
     host: ${PAYMENT_SERVICE_HOST:http://localhost}
@@ -66,8 +67,6 @@ services:
   user-service:
     host: ${USER_SERVICE_HOST:http://localhost}
     port: ${USER_SERVICE_PORT:8080}
-
-
 
 calculations_messages_processing:
   enabled: true

@@ -1,9 +1,9 @@
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: user
-    password: password
+    url: jdbc:postgresql://localhost:5432/testdb
+    username: test
+    password: test
   jpa:
     hibernate:
       ddl-auto: update
@@ -23,25 +23,30 @@ spring:
         calculations_channel:
           name: calculations_channel
 
-  server:
-    port: 8082
+server:
+  port: 8082
 
 services:
+  s3:
+    endpoint: http://localhost:9000
+    access-key: test-access-key
+    secret-key: test-secret-key
+    bucket-name: test-bucket
+    region: us-east-1
+
   payment-service:
     host: http://localhost
     port: 9080
   user-service:
     host: http://localhost
     port: 8080
-  s3:
-    endpoint: http://localhost:9000
-    access-key: test-access-key
-    secret-key: test-secret-key
-    bucket-name: test-bucket
 
-  logging:
-    level:
-      root: info
+calculations_messages_processing:
+  enabled: true
 
-  calculations_messages_processing:
-    enabled: true
+logging:
+  level:
+    root: info
+    org.springframework: info
+    org.testcontainers: info
+    org.hibernate: info

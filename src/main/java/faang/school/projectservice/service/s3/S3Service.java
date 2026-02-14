@@ -34,7 +34,7 @@ public class S3Service {
     private final S3Client s3Client;
     private final String keyPattern = "%s/%s_%s";
 
-    @Value("${services.minio.bucket-name}")
+    @Value("${services.s3.bucket-name}")
     private String bucketName;
 
     public Resource uploadFile(MultipartFile file, String folder) {
@@ -42,17 +42,10 @@ public class S3Service {
         String fileType = file.getContentType();
         String fileName = file.getOriginalFilename();
 
-        // ObjectMetadata objectMetaData = new ObjectMetadata();
-        // objectMetaData.setContentLength(fileSize);
-        // objectMetaData.setContentType(fileType);
-
         String key = String.format(keyPattern, folder,
                 UUID.randomUUID(), fileName);
 
         try {
-            // PutObjectRequest putObjectRequest = new PutObjectRequest(
-            //         bucketName, key, file.getInputStream(), objectMetaData);
-            // s3Client.putObject(putObjectRequest);
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(bucketName)
                     .key(key)
@@ -82,7 +75,6 @@ public class S3Service {
         return resource;
     }
 
-    
     public S3FileDto downloadFile(String key) {
         try {
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
@@ -110,7 +102,7 @@ public class S3Service {
     
     public void deleteFile(String key) {
         try {
-                DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
                     .bucket(bucketName)
                     .key(key)
                     .build();

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 @Getter
 @Setter
 @Component
-@ConfigurationProperties(prefix = "services.minio")
+@ConfigurationProperties(prefix = "services.s3")
 public class ProjectProperties {
     private String maxFileSize;
     private int targetWidth;

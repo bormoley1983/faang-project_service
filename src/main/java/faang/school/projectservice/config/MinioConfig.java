@@ -10,9 +10,9 @@ public class MinioConfig {
 
     @Bean
     public MinioClient minioClient(
-            @Value("${services.minio.endpoint}") String endpoint,
-            @Value("${services.minio.access-key}") String accessKey,
-            @Value("${services.minio.secret-key}") String secretKey
+            @Value("${services.s3.endpoint}") String endpoint,
+            @Value("${services.s3.access-key}") String accessKey,
+            @Value("${services.s3.secret-key}") String secretKey
     ) {
         return MinioClient.builder()
                 .endpoint(endpoint)
@@ -20,7 +20,7 @@ public class MinioConfig {
                 .build();
     }
 
-    @Value("${services.minio.bucket-name}")
+    @Value("${services.s3.bucket-name}")
     private String bucketName;
 
     @Bean

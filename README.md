@@ -23,6 +23,12 @@ Build and run in Docker:
 ./gradlew build
 docker build -t project-service .
 docker run -p 8080:8080 project-service
+
+# Google calendar creds
+docker run -p 8080:8080 \
+  -e GOOGLE_CALENDAR_ENABLED=true \
+  -e GOOGLE_CALENDAR_CREDENTIALS_JSON='{"type":"service_account","private_key":"-----BEGIN PRIVATE KEY-----..."}' \
+  project-service
 ```
 
 ## Configuration
@@ -81,4 +87,20 @@ Redis is used for pub/sub messaging patterns:
 - Publishers and subscribers can be implemented for asynchronous event processing
 - TTL-based caching is supported through Redis
 
+# Sample creds for calendar:
+{
+  "type": "service_account",
+  "project_id": "corporationx-project-calendar",
+  "private_key_id": "private_key_id",
+  "private_key": "private_key",
+  "client_email": "client_email",
+  "client_id": "client_id",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "client_x509_cert_url",
+  "universe_domain": "googleapis.com"
+}
+
 **Note:** Base code structure and architecture patterns are based on [FAANG School](https://github.com/faang-school) educational project.
+

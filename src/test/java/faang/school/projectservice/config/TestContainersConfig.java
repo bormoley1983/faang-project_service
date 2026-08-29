@@ -4,7 +4,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.testcontainers.containers.Network;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 
@@ -18,8 +18,8 @@ public class TestContainersConfig {
     @Bean
     @ServiceConnection
     @SuppressWarnings("resource")
-    public static PostgreSQLContainer<?> postgresContainer() {
-        PostgreSQLContainer<?> container = new PostgreSQLContainer<>(POSTGRES_IMAGE)
+    public static PostgreSQLContainer postgresContainer() {
+        PostgreSQLContainer container = new PostgreSQLContainer(POSTGRES_IMAGE)
             .withNetwork(testNetwork)
             .withNetworkAliases("test-postgres")		        
             .withDatabaseName("testdb")

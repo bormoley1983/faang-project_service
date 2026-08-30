@@ -27,6 +27,8 @@ repositories {
     }
 }
 
+val mockitoAgent = configurations.create("mockitoAgent")
+
 dependencyManagement {
     imports {
         mavenBom("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion")
@@ -118,6 +120,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-postgresql")
     
     testImplementation("org.assertj:assertj-core")
+    mockitoAgent("org.mockito:mockito-core") { isTransitive = false }
 }
 
 jacoco {
@@ -173,11 +176,7 @@ tasks.processTestResources {
 
 tasks.withType<Test> {
     useJUnitPlatform()
-
-    jvmArgs(
-        "-XX:+EnableDynamicAgentLoading",
-        "--enable-native-access=ALL-UNNAMED"
-    )
+    jvmArgs("-Xshare:off", "-javaagent:${mockitoAgent.asPath}")
 }
 
 tasks.test {

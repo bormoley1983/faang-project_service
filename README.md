@@ -83,7 +83,7 @@ curl -X GET http://localhost:8080/your-endpoint \
 ### Redis Messaging
 
 Redis is used for pub/sub messaging patterns:
-- Configuration: [RedisConfig](src/main/java/faang/school/projectservice/config/RedisConfig.java) - sets up RedisTemplate for convenient Redis operations
+- Connection settings are managed through Spring Boot configuration in [application.yaml](src/main/resources/application.yaml)
 - Publishers and subscribers can be implemented for asynchronous event processing
 - TTL-based caching is supported through Redis
 

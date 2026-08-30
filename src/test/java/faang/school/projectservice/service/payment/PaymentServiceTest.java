@@ -34,17 +34,19 @@ public class PaymentServiceTest {
 
     private final BigDecimal testAmount = BigDecimal.valueOf(100.50);
     private final Currency testCurrency = Currency.USD;
+    private final long testPaymentNumber = 42L;
 
     @Test
     public void testMakePayment_ShouldReturnResponse_WhenPaymentIsSuccessful() {
         PaymentResponse expectedResponse = PaymentResponse.builder()
                 .status(PaymentStatus.SUCCESS)
+                .paymentNumber(testPaymentNumber)
                 .build();
 
         when(paymentServiceClient.sendPayment(any(PaymentRequest.class)))
                 .thenReturn(new ResponseEntity<>(expectedResponse, HttpStatus.OK));
 
-        PaymentResponse actualResponse = paymentService.makePayment(testAmount, testCurrency);
+        PaymentResponse actualResponse = paymentService.makePayment(testPaymentNumber, testAmount, testCurrency);
 
         assertEquals(expectedResponse, actualResponse);
     }
@@ -55,7 +57,7 @@ public class PaymentServiceTest {
                 .thenReturn(new ResponseEntity<>((PaymentResponse) null, HttpStatus.BAD_REQUEST));
 
         PaymentFailedException exception = assertThrows(PaymentFailedException.class,
-                () -> paymentService.makePayment(testAmount, testCurrency));
+                () -> paymentService.makePayment(testPaymentNumber, testAmount, testCurrency));
 
         assertEquals("Payment failed for amount 100.5 USD", exception.getMessage());
         verify(paymentServiceClient, times(1))

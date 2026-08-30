@@ -11,6 +11,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
@@ -50,5 +52,26 @@ public class UserServiceTest {
 
         assertEquals("User client failed", exception.getMessage());
         verify(userServiceClient).getUser(testUserId);
+    }
+
+    @Test
+    void getUsersReturnsBulkClientBody() {
+        List<Long> ids = List.of(1L, 2L);
+        List<UserDto> users = List.of(
+                new UserDto(1L, "one", "one@example.com"),
+                new UserDto(2L, "two", "two@example.com"));
+        when(userServiceClient.getUsersByIds(ids)).thenReturn(ResponseEntity.ok(users));
+
+        assertEquals(users, userService.getUsers(ids));
+        verify(userServiceClient).getUsersByIds(ids);
+    }
+
+    @Test
+    void getUsersRejectsMissingBulkResponseBody() {
+        List<Long> ids = List.of(1L);
+        when(userServiceClient.getUsersByIds(ids))
+                .thenReturn(ResponseEntity.<List<UserDto>>ok().build());
+
+        assertThrows(UserClientException.class, () -> userService.getUsers(ids));
     }
 }

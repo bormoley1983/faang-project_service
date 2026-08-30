@@ -6,11 +6,11 @@ import faang.school.projectservice.model.InternshipStatus;
 import faang.school.projectservice.repository.InternshipRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -57,9 +57,7 @@ public class InternshipService {
     }
 
     @Transactional(readOnly = true)
-    public List<Internship> getInternships(InternshipStatus status, Long roleId) {
-        return internshipRepository.findAll().stream()
-                .filter(i -> status == null || i.getStatus() == status)
-                .collect(Collectors.toList());
+    public Page<Internship> getInternships(InternshipStatus status, Long roleId, Pageable pageable) {
+        return internshipRepository.search(status, roleId, pageable);
     }
 }

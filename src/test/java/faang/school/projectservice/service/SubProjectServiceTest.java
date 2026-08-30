@@ -1,10 +1,11 @@
 package faang.school.projectservice.service;
 
 import faang.school.projectservice.mapper.ProjectMapper;
+import faang.school.projectservice.event.ProjectCalendarProvisioningRequested;
 import faang.school.projectservice.model.Project;
 import faang.school.projectservice.model.ProjectStatus;
 import faang.school.projectservice.repository.ProjectRepository;
-import faang.school.projectservice.service.google.GoogleCalendarService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,10 +31,13 @@ class SubProjectServiceTest {
     private ProjectRepository projectRepository;
 
     @Mock
+    private ProjectAuthorizationService projectAuthorizationService;
+
+    @Mock
     private ProjectMapper projectMapper;
 
     @Mock
-    private GoogleCalendarService googleCalendarService;
+    private ApplicationEventPublisher eventPublisher;
 
     @Mock
     private ProjectScheduleService projectScheduleService;
@@ -83,14 +87,14 @@ class SubProjectServiceTest {
 
         when(projectRepository.findById(parentProject.getId())).thenReturn(Optional.of(parentProject));
         when(projectRepository.save(any(Project.class))).thenReturn(subProject);
-        when(googleCalendarService.createCalendar(any())).thenReturn(new com.google.api.services.calendar.model.Calendar());
-
         Project result = projectService.createSubProject(subProject, 1L);
 
         assertNotNull(result);
         assertEquals("Subproject", result.getName());
         assertEquals(parentProject, result.getParentProject());
         verify(projectRepository, times(1)).save(subProject);
+        verify(eventPublisher).publishEvent(
+                new ProjectCalendarProvisioningRequested(subProject.getId(), subProject.getName()));
     }
 
     @Test

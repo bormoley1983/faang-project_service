@@ -6,6 +6,7 @@ import faang.school.projectservice.model.Internship;
 import faang.school.projectservice.model.InternshipStatus;
 import faang.school.projectservice.service.InternshipService;
 import faang.school.projectservice.validator.InternshipValidator;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,9 +17,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/internships")
@@ -30,7 +30,7 @@ public class InternshipController {
     private final InternshipValidator internshipValidator;
 
     @PostMapping
-    public InternshipDto createInternship(@RequestBody InternshipDto internshipDto) {
+    public InternshipDto createInternship(@Valid @RequestBody InternshipDto internshipDto) {
         internshipValidator.validateForCreation(internshipDto);
         Internship internship = internshipMapper.toEntity(internshipDto);
         Internship savedInternship = internshipService.createInternship(internship);
@@ -40,7 +40,7 @@ public class InternshipController {
     @PatchMapping("/{id}")
     public InternshipDto partialUpdateInternship(
             @PathVariable Long id,
-            @RequestBody InternshipDto internshipDto) {
+            @Valid @RequestBody InternshipDto internshipDto) {
         internshipValidator.validatePartialUpdate(internshipDto);
         Internship updatedInternship = internshipService.partialUpdateInternship(id, internshipDto);
         return internshipMapper.toDto(updatedInternship);
@@ -53,13 +53,11 @@ public class InternshipController {
     }
 
     @GetMapping
-    public List<InternshipDto> getInternships(
+    public Page<InternshipDto> getInternships(
             @RequestParam(required = false) InternshipStatus status,
-            @RequestParam(required = false) Long roleId
+            @RequestParam(required = false) Long roleId,
+            Pageable pageable
     ) {
-        List<Internship> internships = internshipService.getInternships(status, roleId);
-        return internships.stream()
-                .map(internshipMapper::toDto)
-                .collect(Collectors.toList());
+        return internshipService.getInternships(status, roleId, pageable).map(internshipMapper::toDto);
     }
 }

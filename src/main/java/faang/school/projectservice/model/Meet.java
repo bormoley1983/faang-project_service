@@ -56,6 +56,9 @@ public class Meet {
     @Column(name = "starts_at", nullable = false)
     private LocalDateTime startsAt;
 
+    @Column(name = "ends_at", nullable = false)
+    private LocalDateTime endsAt;
+
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;

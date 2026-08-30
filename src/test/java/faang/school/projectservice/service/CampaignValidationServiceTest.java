@@ -1,6 +1,7 @@
 package faang.school.projectservice.service;
 
 import faang.school.projectservice.dto.campaign.CampaignDto;
+import faang.school.projectservice.exception.AccessDeniedException;
 import faang.school.projectservice.model.Campaign;
 import faang.school.projectservice.model.Project;
 import faang.school.projectservice.model.TeamMember;
@@ -55,14 +56,12 @@ public class CampaignValidationServiceTest {
 
     @Test
     void validateUserCanCreateCampaign_ShouldPassForProjectOwner() {
-        teamMember.setRoles(List.of());
-        when(teamMemberService.getTeamMemberByUserIdAndProjectId(anyLong(), anyLong())).thenReturn(Optional.of(teamMember));
-
         assertDoesNotThrow(() -> campaignValidationService.validateUserCanCreateCampaign(campaign, project, 1L));
     }
 
     @Test
     void validateUserCanCreateCampaign_ShouldPassForManager() {
+        project.setOwnerId(2L);
         when(teamMemberService.getTeamMemberByUserIdAndProjectId(anyLong(), anyLong())).thenReturn(Optional.of(teamMember));
 
         assertDoesNotThrow(() -> campaignValidationService.validateUserCanCreateCampaign(campaign, project, 1L));
@@ -83,8 +82,8 @@ public class CampaignValidationServiceTest {
         when(teamMemberService.getTeamMemberByUserIdAndProjectId(anyLong(), anyLong())).thenReturn(Optional.empty());
 
         NoSuchElementException exception = assertThrows(NoSuchElementException.class,
-                () -> campaignValidationService.validateUserCanCreateCampaign(campaign, project, teamMember.getUserId()));
-        assertEquals(String.format("User with id %d is not a team member of project with id %d", teamMember.getUserId(), project.getId()), exception.getMessage());
+                () -> campaignValidationService.validateUserCanCreateCampaign(campaign, project, 2L));
+        assertEquals("User with id 2 is not a team member of project with id 1", exception.getMessage());
     }
 
     @Test
@@ -93,18 +92,16 @@ public class CampaignValidationServiceTest {
         project.setOwnerId(2L);
         when(teamMemberService.getTeamMemberByUserIdAndProjectId(anyLong(), anyLong())).thenReturn(Optional.of(teamMember));
 
-        UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class,
+        AccessDeniedException exception = assertThrows(AccessDeniedException.class,
                 () -> campaignValidationService.validateUserCanCreateCampaign(campaign, project, 1L));
 
-        assertEquals("User with id 1 cannot create a fundraising! Only the project owner or a manager can create a campaign", exception.getMessage());
+        assertEquals("Only the project owner or a project manager may modify campaigns", exception.getMessage());
     }
 
     @Test
     void validateUserCanUpdateCampaign_ShouldPassForValidUpdate() {
         CampaignDto campaignDto = new CampaignDto();
         campaignDto.setIdCreatedBy(1L);
-        when(teamMemberService.getTeamMemberByUserIdAndProjectId(anyLong(), anyLong())).thenReturn(Optional.of(teamMember));
-
         assertDoesNotThrow(() -> campaignValidationService.validateUserCanUpdateCampaign(campaign, 1L, campaignDto));
     }
 
@@ -160,27 +157,47 @@ public class CampaignValidationServiceTest {
         when(teamMemberService.getTeamMemberByUserIdAndProjectId(anyLong(), anyLong())).thenReturn(Optional.empty());
 
         NoSuchElementException exception = assertThrows(NoSuchElementException.class,
-                () -> campaignValidationService.validateUserCanUpdateCampaign(campaign, teamMember.getUserId(), campaignDto));
+                () -> campaignValidationService.validateUserCanUpdateCampaign(campaign, 2L, campaignDto));
 
-        assertEquals(String.format("User with id %d is not a team member of project with id %d", teamMember.getUserId(), project.getId()), exception.getMessage());
+        assertEquals("User with id 2 is not a team member of project with id 1", exception.getMessage());
     }
 
     @Test
     void validateUserCanDeleteCampaign_ShouldPassForValidDeletion() {
         campaign.setStatus(ACTIVE);
-        when(teamMemberService.getTeamMemberByUserIdAndProjectId(anyLong(), anyLong())).thenReturn(Optional.of(teamMember));
-
         assertDoesNotThrow(() -> campaignValidationService.validateUserCanDeleteCampaign(campaign, teamMember.getUserId()));
     }
 
     @Test
     void validateUserCanDeleteCampaign_ShouldThrowExceptionForAlreadyCanceled() {
         campaign.setStatus(CANCELED);
-        when(teamMemberService.getTeamMemberByUserIdAndProjectId(anyLong(), anyLong())).thenReturn(Optional.of(teamMember));
-
         UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class,
                 () -> campaignValidationService.validateUserCanDeleteCampaign(campaign, teamMember.getUserId()));
 
         assertEquals("Campaign is already canceled", exception.getMessage());
+    }
+
+    @Test
+    void validateUserCanUpdateCampaignRejectsOrdinaryProjectMember() {
+        project.setOwnerId(2L);
+        teamMember.setRoles(List.of(TeamRole.DEVELOPER));
+        CampaignDto update = new CampaignDto();
+        when(teamMemberService.getTeamMemberByUserIdAndProjectId(1L, 1L))
+                .thenReturn(Optional.of(teamMember));
+
+        assertThrows(AccessDeniedException.class,
+                () -> campaignValidationService.validateUserCanUpdateCampaign(campaign, 1L, update));
+    }
+
+    @Test
+    void validateUserCanDeleteCampaignRejectsOrdinaryProjectMember() {
+        project.setOwnerId(2L);
+        campaign.setStatus(ACTIVE);
+        teamMember.setRoles(List.of(TeamRole.DEVELOPER));
+        when(teamMemberService.getTeamMemberByUserIdAndProjectId(1L, 1L))
+                .thenReturn(Optional.of(teamMember));
+
+        assertThrows(AccessDeniedException.class,
+                () -> campaignValidationService.validateUserCanDeleteCampaign(campaign, 1L));
     }
 }

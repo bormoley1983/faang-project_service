@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -32,9 +34,9 @@ public class VacancyService {
 
     @Transactional
     public Vacancy createVacancy(Vacancy vacancy, Long currentUserIds, Long projectId) {
-        validatorService.validateCuratorHasOwnerOrManagerRole(currentUserIds);
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ProjectNotFoundException("Project not found"));
+        validatorService.validateUserCanManageProject(currentUserIds, project);
         vacancy.setProject(project);
         vacancyRepository.save(vacancy);
         return vacancy;
@@ -45,7 +47,7 @@ public class VacancyService {
         Vacancy vacancyToUpdate = vacancyRepository.findById(vacancyId)
                 .orElseThrow(() -> new VacancyNotFoundException("Vacancy Not Found"));
 
-        validatorService.validateCuratorHasOwnerOrManagerRole(currentUserIds);
+        validatorService.validateUserCanManageProject(currentUserIds, vacancyToUpdate.getProject());
         validatorService.validateVacancyCanBeClosed(vacancyToUpdate, vacancy.getStatus());
 
         if (vacancy.getPosition() != null) {
@@ -67,9 +69,16 @@ public class VacancyService {
         Vacancy vacancy = vacancyRepository.findById(vacancyId)
                 .orElseThrow(() -> new VacancyNotFoundException("Vacancy Not Found"));
 
-        validatorService.validateCuratorHasOwnerOrManagerRole(currentUserIds);
+        if (!Objects.equals(vacancy.getProject().getId(), projectId)) {
+            throw new IllegalArgumentException("Vacancy does not belong to project " + projectId);
+        }
+        validatorService.validateUserCanManageProject(currentUserIds, vacancy.getProject());
+        List<Candidate> candidates = candidateRepository.findAllById(candidateIds);
+        if (candidates.size() != candidateIds.stream().distinct().count()) {
+            throw new IllegalArgumentException("One or more candidates do not exist");
+        }
         if (!candidateIds.isEmpty()) {
-            validatorService.ensureCandidatesAreNotProjectMembers(candidateIds, projectId);
+            validatorService.ensureCandidatesAreNotProjectMembers(candidates, projectId);
         }
 
         Set<Long> existingCandidateIds = vacancy.getCandidates().stream()
@@ -79,7 +88,9 @@ public class VacancyService {
                 .filter(candidateId -> !existingCandidateIds.contains(candidateId))
                 .toList();
         if (!newCandidateIds.isEmpty()) {
-            List<Candidate> newCandidates = candidateRepository.findAllById(newCandidateIds);
+            List<Candidate> newCandidates = candidates.stream()
+                    .filter(candidate -> newCandidateIds.contains(candidate.getId()))
+                    .toList();
             vacancy.getCandidates().addAll(newCandidates);
         }
 
@@ -88,25 +99,17 @@ public class VacancyService {
 
     @Transactional
     public void removeVacancy(Long vacancyId, Long currentUserIds) {
-        validatorService.validateCuratorHasOwnerOrManagerRole(currentUserIds);
-
-        if (!vacancyRepository.existsById(vacancyId)) {
-            throw new VacancyNotFoundException("Vacancy Not Found");
-        }
-        vacancyRepository.deleteById(vacancyId);
+        Vacancy vacancy = vacancyRepository.findById(vacancyId)
+                .orElseThrow(() -> new VacancyNotFoundException("Vacancy Not Found"));
+        validatorService.validateUserCanManageProject(currentUserIds, vacancy.getProject());
+        vacancyRepository.delete(vacancy);
         log.info("Vacancy with ID {} successfully deleted by user {}", vacancyId, currentUserIds);
     }
 
     @Transactional
-    public List<Vacancy> filterVacancies(TeamRole position, String name) {
-        List<Vacancy> allVacancies = vacancyRepository.findAll();
-        if (allVacancies.isEmpty()) {
-            throw new VacancyNotFoundException("Vacancy Not Found");
-        }
-        return allVacancies.stream()
-                .filter(vacancy -> Objects.equals(vacancy.getName(), name) && Objects.equals(vacancy.getPosition(),
-                        position))
-                .toList();
+    public Page<Vacancy> filterVacancies(TeamRole position, String name, Pageable pageable) {
+        String normalizedName = name == null || name.isBlank() ? null : name.trim();
+        return vacancyRepository.search(position, normalizedName, pageable);
     }
 
     @Transactional

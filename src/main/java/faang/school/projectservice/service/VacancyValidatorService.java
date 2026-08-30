@@ -1,8 +1,11 @@
 package faang.school.projectservice.service;
 
 
+import faang.school.projectservice.exception.AccessDeniedException;
 import faang.school.projectservice.model.TeamMember;
 import faang.school.projectservice.model.TeamRole;
+import faang.school.projectservice.model.Candidate;
+import faang.school.projectservice.model.Project;
 import faang.school.projectservice.model.Vacancy;
 import faang.school.projectservice.model.VacancyStatus;
 import faang.school.projectservice.repository.ProjectRepository;
@@ -18,21 +21,25 @@ public class VacancyValidatorService {
     private final TeamMemberRepository teamMemberRepository;
     private final ProjectRepository projectRepository;
 
-    public void validateCuratorHasOwnerOrManagerRole(Long curatorId) {
-        TeamMember curator = teamMemberRepository.findById(curatorId)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid curator id: " + curatorId));
+    public void validateUserCanManageProject(Long userId, Project project) {
+        if (project.getOwnerId().equals(userId)) {
+            return;
+        }
+        TeamMember curator = teamMemberRepository.findByUserIdAndProjectId(userId, project.getId());
 
-        if (!curator.getRoles().contains(TeamRole.OWNER) &&
-                !curator.getRoles().contains(TeamRole.MANAGER)) {
-            throw new IllegalArgumentException("Curator should be OWNER or MANAGER");
+        if (curator == null || (!curator.getRoles().contains(TeamRole.OWNER) &&
+                !curator.getRoles().contains(TeamRole.MANAGER))) {
+            throw new AccessDeniedException(
+                    "User must be the project owner or a project manager");
         }
     }
 
-    public void ensureCandidatesAreNotProjectMembers(List<Long> candidateIds, Long projectId) {
-        List<Long> projectMembers = projectRepository.findAllTeamMemberIdsByProjectId(projectId);
-        candidateIds.forEach(candidateId -> {
-            if (projectMembers.contains(candidateId)) {
-                throw new IllegalArgumentException("Candidate " + candidateId + " is already in project " + projectId);
+    public void ensureCandidatesAreNotProjectMembers(List<Candidate> candidates, Long projectId) {
+        List<Long> projectMembers = projectRepository.findAllTeamMemberUserIdsByProjectId(projectId);
+        candidates.forEach(candidate -> {
+            if (projectMembers.contains(candidate.getUserId())) {
+                throw new IllegalArgumentException(
+                        "Candidate user " + candidate.getUserId() + " is already in project " + projectId);
             }
         });
     }

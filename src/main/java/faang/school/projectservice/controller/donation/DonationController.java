@@ -16,11 +16,15 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Tag(name = "Donation management", description = "Operations related to donations to campaigns")
 @RequiredArgsConstructor
@@ -48,11 +52,13 @@ public class DonationController {
             }
     )
     @PostMapping("/donation/create")
-    public ResponseEntity<DonationDto> createDonation(@Valid @RequestBody DonationDto donationDtoRequest) {
+    public ResponseEntity<DonationDto> createDonation(
+            @RequestHeader("Idempotency-Key") UUID idempotencyKey,
+            @Valid @RequestBody DonationDto donationDtoRequest) {
 
         Donation donationRequest = donationMapper.toEntity(donationDtoRequest);
 
-        Donation donationResponse = donationService.createDonation(donationRequest);
+        Donation donationResponse = donationService.createDonation(donationRequest, idempotencyKey);
 
         DonationDto donationDtoResponse = donationMapper.toDto(donationResponse);
 
@@ -75,7 +81,7 @@ public class DonationController {
                     @ApiResponse(responseCode = "500", description = "Internal server error")
             }
     )
-    @PostMapping("/donation/{donationId}")
+    @GetMapping("/donation/{donationId}")
     public ResponseEntity<DonationDto> getDonationById(@Parameter(description = "Id of the donation you want to retrieve")
                                                            @PathVariable long donationId) {
 
@@ -102,14 +108,10 @@ public class DonationController {
                     @ApiResponse(responseCode = "500", description = "Internal server error")
             }
     )
-    @PostMapping("/donations")
-    public ResponseEntity<List<DonationDto>> getAllUserDonations(
-            @RequestBody(required = false) DonationFilterDto dtoFilters) {
-
-        List<Donation> donationsResponse = donationService.getAllUserDonations(dtoFilters);
-
-        List<DonationDto> donationDtosResponse = donationMapper.toDto(donationsResponse);
-
-        return ResponseEntity.ok(donationDtosResponse);
+    @GetMapping("/donations")
+    public ResponseEntity<Page<DonationDto>> getAllUserDonations(
+            DonationFilterDto dtoFilters, Pageable pageable) {
+        return ResponseEntity.ok(donationService.getAllUserDonations(dtoFilters, pageable)
+                .map(donationMapper::toDto));
     }
 }

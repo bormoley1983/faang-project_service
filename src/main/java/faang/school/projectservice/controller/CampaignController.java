@@ -2,10 +2,12 @@ package faang.school.projectservice.controller;
 
 import faang.school.projectservice.dto.campaign.CampaignDto;
 import faang.school.projectservice.dto.campaign.CampaignFilterDto;
+import faang.school.projectservice.config.context.user.UserContext;
 import faang.school.projectservice.mapper.campaign.CampaignMapper;
 import faang.school.projectservice.model.Campaign;
 import faang.school.projectservice.service.CampaignService;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -30,11 +32,12 @@ public class CampaignController {
 
     private final CampaignService campaignService;
     private final CampaignMapper campaignMapper;
+    private final UserContext userContext;
 
-    @PostMapping("/project/{projectId}/user/{userId}")
+    @PostMapping("/project/{projectId}")
     public ResponseEntity<CampaignDto> createCampaign(@PathVariable @Positive @NotNull Long projectId,
-                                                      @PathVariable @Positive @NotNull Long userId,
-                                                      @RequestBody CampaignDto campaignDto) {
+                                                      @Valid @RequestBody CampaignDto campaignDto) {
+        long userId = userContext.getUserId();
         Campaign campaignToCreate = campaignMapper.toEntity(campaignDto);
         Campaign createdCampaign = campaignService.createCampaign(campaignToCreate, projectId, userId);
         CampaignDto createdCampaignDto = campaignMapper.toDto(createdCampaign);
@@ -42,20 +45,19 @@ public class CampaignController {
         return ResponseEntity.status(HttpStatus.CREATED).body(createdCampaignDto);
     }
 
-    @PatchMapping("/{campaignId}/user/{userId}")
+    @PatchMapping("/{campaignId}")
     public ResponseEntity<CampaignDto> updateCampaign(@PathVariable @Positive @NotNull Long campaignId,
-                                                      @PathVariable @Positive @NotNull Long userId,
-                                                      @RequestBody CampaignDto campaignDto) {
-
+                                                      @Valid @RequestBody CampaignDto campaignDto) {
+        long userId = userContext.getUserId();
         Campaign updatedCampaign = campaignService.updateCampaign(campaignId, userId, campaignDto);
         CampaignDto updatedCampaignDto = campaignMapper.toDto(updatedCampaign);
 
         return ResponseEntity.ok().body(updatedCampaignDto);
     }
 
-    @DeleteMapping("/{campaignId}/user/{userId}")
-    public ResponseEntity<CampaignDto> deleteCampaign(@PathVariable @Positive @NotNull Long campaignId,
-                                                      @PathVariable @Positive @NotNull Long userId) {
+    @DeleteMapping("/{campaignId}")
+    public ResponseEntity<CampaignDto> deleteCampaign(@PathVariable @Positive @NotNull Long campaignId) {
+        long userId = userContext.getUserId();
         Campaign deletedCampaign = campaignService.deleteCampaign(campaignId, userId);
         CampaignDto deletedCampaignDto = campaignMapper.toDto(deletedCampaign);
         return ResponseEntity.ok().body(deletedCampaignDto);
@@ -70,7 +72,7 @@ public class CampaignController {
 
     @PostMapping("/get-by-project/{projectId}")
     public ResponseEntity<List<CampaignDto>> getCampaignsByProject(@PathVariable @Positive @NotNull Long projectId,
-                                                                   @RequestBody CampaignFilterDto campaignFilterDto) {
+                                                                   @RequestBody(required = false) CampaignFilterDto campaignFilterDto) {
 
         List<Campaign> campaignList = campaignService.getCampaignsByProjectIdAndFilter(projectId, campaignFilterDto);
         List<CampaignDto> campaignDtoList = campaignMapper.toDtoList(campaignList);

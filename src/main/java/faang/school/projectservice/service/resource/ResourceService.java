@@ -14,6 +14,7 @@ import faang.school.projectservice.repository.ProjectRepository;
 import faang.school.projectservice.repository.ResourceRepository;
 import faang.school.projectservice.repository.TeamMemberRepository;
 import faang.school.projectservice.service.s3.S3Service;
+import faang.school.projectservice.service.s3.StorageTransactionCoordinator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +37,7 @@ import static faang.school.projectservice.service.resource.ResourceErrorMessage.
 @Service
 public class ResourceService {
     private final S3Service s3Service;
+    private final StorageTransactionCoordinator storageTransactionCoordinator;
 
     private final ResourceRepository resourceRepository;
     private final ProjectRepository projectRepository;
@@ -57,6 +59,7 @@ public class ResourceService {
         String folder = String.format(folderPattern, projectId, project.getName());
 
         Resource resource = s3Service.uploadFile(file, folder);
+        storageTransactionCoordinator.deleteOnRollback(resource.getKey());
         resource.setName(file.getOriginalFilename());
         resource.setProject(project);
         resource.setCreatedBy(member);
@@ -86,14 +89,16 @@ public class ResourceService {
         BigInteger newStorageSize = calculateStorageSize(project, sizeDifference);
         String folder = String.format(folderPattern, projectId, project.getName());
 
-        s3Service.deleteFile(oldResource.getKey());
         Resource newResource = s3Service.uploadFile(file, folder);
+        storageTransactionCoordinator.deleteOnRollback(newResource.getKey());
+        String oldKey = oldResource.getKey();
 
         oldResource.setKey(newResource.getKey());
         oldResource.setUpdatedBy(member);
         oldResource = resourceRepository.save(oldResource);
 
         updateStorageSize(newStorageSize, project);
+        storageTransactionCoordinator.deleteAfterCommit(oldKey);
         return oldResource;
     }
 
@@ -108,7 +113,7 @@ public class ResourceService {
             throw new AccessDeniedException(MEMBER_NOT_HAVE_AUTHORITY);
         }
 
-        s3Service.deleteFile(resource.getKey());
+        String key = resource.getKey();
 
         BigInteger newStorageSize = calculateStorageSize(project, resource.getSize().negate().longValue());
         updateStorageSize(newStorageSize, project);
@@ -118,6 +123,7 @@ public class ResourceService {
         resource.setStatus(ResourceStatus.DELETED);
         resource.setUpdatedBy(member);
         resourceRepository.save(resource);
+        storageTransactionCoordinator.deleteAfterCommit(key);
     }
 
     @Transactional(readOnly = true)

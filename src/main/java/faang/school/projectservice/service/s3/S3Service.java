@@ -21,6 +21,7 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.math.BigInteger;
 import java.util.UUID;
+import java.io.InputStream;
 
 import static faang.school.projectservice.service.s3.S3ErrorMessage.FAILED_DELETE_FILE;
 import static faang.school.projectservice.service.s3.S3ErrorMessage.FAILED_DOWNLOAD_FILE;
@@ -73,6 +74,19 @@ public class S3Service {
         resource.setStatus(ResourceStatus.ACTIVE);
 
         return resource;
+    }
+
+    public String uploadFile(InputStream inputStream, long size, String contentType, String fileName, String folder) {
+        String key = String.format(keyPattern, folder, UUID.randomUUID(), fileName);
+        try {
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(bucketName).key(key).contentType(contentType).contentLength(size).build();
+            s3Client.putObject(request, RequestBody.fromInputStream(inputStream, size));
+            return key;
+        } catch (Exception exception) {
+            log.error("Failed to upload generated file to S3", exception);
+            throw new FileException(FAILED_UPLOAD_FILE);
+        }
     }
 
     public S3FileDto downloadFile(String key) {

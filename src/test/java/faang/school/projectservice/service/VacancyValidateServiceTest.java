@@ -1,6 +1,8 @@
 package faang.school.projectservice.service;
 
 import faang.school.projectservice.model.Candidate;
+import faang.school.projectservice.model.Project;
+import faang.school.projectservice.exception.AccessDeniedException;
 import faang.school.projectservice.model.TeamMember;
 import faang.school.projectservice.model.TeamRole;
 import faang.school.projectservice.model.Vacancy;
@@ -16,7 +18,6 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
-import java.util.Optional;
 
 @ExtendWith(MockitoExtension.class)
 public class VacancyValidateServiceTest {
@@ -33,23 +34,24 @@ public class VacancyValidateServiceTest {
     @Test
     void validateCuratorRoleTest() {
         Long curatorId = 1L;
+        Project project = Project.builder().id(10L).ownerId(99L).build();
         TeamMember teamMember = new TeamMember();
         teamMember.setRoles(List.of(TeamRole.DEVELOPER));
-        Mockito.when(teamMemberRepository.findById(curatorId))
-                .thenReturn(Optional.of(teamMember));
-        Assertions.assertThrows(IllegalArgumentException.class, () ->
-                validateService.validateCuratorHasOwnerOrManagerRole(curatorId));
+        Mockito.when(teamMemberRepository.findByUserIdAndProjectId(curatorId, project.getId()))
+                .thenReturn(teamMember);
+        Assertions.assertThrows(AccessDeniedException.class, () ->
+                validateService.validateUserCanManageProject(curatorId, project));
     }
 
     @Test
     void validateCandidatesNotInProjectTest() {
-        List<Long> candidateIds = List.of(1L, 2L, 3L);
+        List<Candidate> candidates = List.of(candidate(1L), candidate(2L), candidate(3L));
         Long projectId = 1L;
         List<Long> projectMembers = List.of(4L, 5L, 3L);
-        Mockito.when(projectRepository.findAllTeamMemberIdsByProjectId(projectId))
+        Mockito.when(projectRepository.findAllTeamMemberUserIdsByProjectId(projectId))
                 .thenReturn(projectMembers);
         Assertions.assertThrows(IllegalArgumentException.class, () ->
-                validateService.ensureCandidatesAreNotProjectMembers(candidateIds, projectId));
+                validateService.ensureCandidatesAreNotProjectMembers(candidates, projectId));
     }
 
     @Test
@@ -60,5 +62,11 @@ public class VacancyValidateServiceTest {
         VacancyStatus status = VacancyStatus.CLOSED;
         Assertions.assertThrows(IllegalArgumentException.class, () ->
                 validateService.validateVacancyCanBeClosed(vacancy, status));
+    }
+
+    private Candidate candidate(long userId) {
+        Candidate candidate = new Candidate();
+        candidate.setUserId(userId);
+        return candidate;
     }
 }

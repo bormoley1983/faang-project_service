@@ -15,6 +15,7 @@ import faang.school.projectservice.repository.ResourceRepository;
 import faang.school.projectservice.repository.TeamMemberRepository;
 import faang.school.projectservice.service.resource.ResourceService;
 import faang.school.projectservice.service.s3.S3Service;
+import faang.school.projectservice.service.s3.StorageTransactionCoordinator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,6 +44,9 @@ public class ResourceServiceTest {
 
     @Mock
     private S3Service s3Service;
+
+    @Mock
+    private StorageTransactionCoordinator storageTransactionCoordinator;
 
     @Mock
     private ResourceRepository resourceRepository;

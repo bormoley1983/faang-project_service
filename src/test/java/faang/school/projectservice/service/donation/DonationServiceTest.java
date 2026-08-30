@@ -3,6 +3,7 @@ package faang.school.projectservice.service.donation;
 import faang.school.projectservice.config.context.user.UserContext;
 import faang.school.projectservice.dto.client.Currency;
 import faang.school.projectservice.dto.client.PaymentResponse;
+import faang.school.projectservice.dto.client.PaymentStatus;
 import faang.school.projectservice.dto.client.UserDto;
 import faang.school.projectservice.dto.donation.DonationFilterDto;
 import faang.school.projectservice.exception.payment.CampaignNotActiveException;
@@ -10,6 +11,7 @@ import faang.school.projectservice.filter.donation.DonationFilter;
 import faang.school.projectservice.model.Campaign;
 import faang.school.projectservice.model.CampaignStatus;
 import faang.school.projectservice.model.Donation;
+import faang.school.projectservice.model.DonationStatus;
 import faang.school.projectservice.repository.CampaignRepository;
 import faang.school.projectservice.repository.DonationRepository;
 import faang.school.projectservice.service.payment.PaymentService;
@@ -21,11 +23,13 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -42,6 +46,9 @@ public class DonationServiceTest {
 
     @Mock
     private PaymentService paymentService;
+
+    @Mock
+    private DonationIntentService donationIntentService;
 
     @Mock
     private DonationRepository donationRepository;
@@ -81,11 +88,12 @@ public class DonationServiceTest {
         when(userService.getUser(idCaptor.capture()))
                 .thenReturn(mockUserDto);
 
-        when(campaignRepository.findById(eq(campaignId)))
-                .thenReturn(Optional.empty());
+        UUID idempotencyKey = UUID.randomUUID();
+        when(donationIntentService.createOrLoadIntent(mockDonation, 0L, idempotencyKey))
+                .thenThrow(new NoSuchElementException("Campaign not found"));
 
         assertThrows(NoSuchElementException.class, () ->
-                donationService.createDonation(mockDonation));
+                donationService.createDonation(mockDonation, idempotencyKey));
     }
 
     @Test
@@ -103,11 +111,12 @@ public class DonationServiceTest {
         when(userService.getUser(idCaptor.capture()))
                 .thenReturn(mockUserDto);
 
-        when(campaignRepository.findById(campaignId))
-                .thenReturn(Optional.ofNullable(campaign));
+        UUID idempotencyKey = UUID.randomUUID();
+        when(donationIntentService.createOrLoadIntent(mockDonation, 0L, idempotencyKey))
+                .thenThrow(new CampaignNotActiveException("Campaign is not active"));
 
         assertThrows(CampaignNotActiveException.class, () ->
-                donationService.createDonation(mockDonation));
+                donationService.createDonation(mockDonation, idempotencyKey));
     }
 
     @Test
@@ -125,28 +134,38 @@ public class DonationServiceTest {
                 .build();
 
         PaymentResponse paymentResponse = PaymentResponse.builder()
+                .status(PaymentStatus.SUCCESS)
                 .paymentNumber(123123)
+                .build();
+        UUID idempotencyKey = UUID.randomUUID();
+        Donation intent = Donation.builder()
+                .id(10L)
+                .paymentNumber(123123L)
+                .status(DonationStatus.PENDING)
+                .amount(mockDonation.getAmount())
+                .currency(mockDonation.getCurrency())
+                .campaign(campaign)
+                .build();
+        Donation completed = Donation.builder()
+                .id(10L)
+                .status(DonationStatus.COMPLETED)
                 .build();
 
         when(userService.getUser(idCaptor.capture()))
                 .thenReturn(mockUserDto);
 
-        when(campaignRepository.findById(campaignId))
-                .thenReturn(Optional.ofNullable(campaign));
-
-        when(paymentService.makePayment(mockDonation.getAmount(), mockDonation.getCurrency()))
+        when(donationIntentService.createOrLoadIntent(mockDonation, 0L, idempotencyKey))
+                .thenReturn(intent);
+        when(paymentService.makePayment(intent.getPaymentNumber(), intent.getAmount(), intent.getCurrency()))
                 .thenReturn(paymentResponse);
+        when(donationIntentService.completeIntent(intent.getId(), paymentResponse))
+                .thenReturn(completed);
 
-        donationService.createDonation(mockDonation);
+        assertEquals(completed, donationService.createDonation(mockDonation, idempotencyKey));
 
         verify(paymentService, times(1))
-                .makePayment(mockDonation.getAmount(), mockDonation.getCurrency());
-
-        verify(donationRepository, times(1))
-                .save(donationCaptor.capture());
-
-        assertEquals(paymentResponse.paymentNumber(),
-                donationCaptor.getValue().getPaymentNumber());
+                .makePayment(intent.getPaymentNumber(), intent.getAmount(), intent.getCurrency());
+        verify(donationIntentService).completeIntent(intent.getId(), paymentResponse);
     }
 
     @Test
@@ -197,9 +216,9 @@ public class DonationServiceTest {
         when(userService.getUser(eq(userId)))
                 .thenReturn(mockUserDto);
 
-        donationService.getAllUserDonations(filterDto);
+        donationService.getAllUserDonations(filterDto, Pageable.unpaged());
 
         verify(donationRepository, times(1))
-                .findAllByUserId(eq(userId));
+                .searchByUserId(eq(userId), eq(null), eq(null), eq(null), eq(null), eq(Pageable.unpaged()));
     }
 }

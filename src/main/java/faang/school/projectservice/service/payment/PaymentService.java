@@ -12,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -20,17 +19,17 @@ import java.util.UUID;
 public class PaymentService {
     private final PaymentServiceClient paymentServiceClient;
 
-    public PaymentResponse makePayment(BigDecimal amount, Currency currency) {
+    public PaymentResponse makePayment(long paymentNumber, BigDecimal amount, Currency currency) {
         log.info("Initiating payment for amount {} {}", amount, currency);
-
-        long paymentNumber = UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE;
 
         PaymentRequest paymentRequest = new PaymentRequest(paymentNumber, amount, currency);
 
         ResponseEntity<PaymentResponse> paymentResponse = paymentServiceClient.sendPayment(paymentRequest);
         log.debug("Received payment response: {}", paymentResponse);
 
-        if (paymentResponse.getStatusCode() != HttpStatus.OK || paymentResponse.getBody() == null) {
+        if (paymentResponse.getStatusCode() != HttpStatus.OK || paymentResponse.getBody() == null
+                || paymentResponse.getBody().status() != faang.school.projectservice.dto.client.PaymentStatus.SUCCESS
+                || paymentResponse.getBody().paymentNumber() != paymentNumber) {
             log.error("Payment failed. Status: {}, Response Body: {}",
                     paymentResponse.getStatusCode(),
                     paymentResponse.getBody());

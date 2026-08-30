@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 import static faang.school.projectservice.model.CampaignStatus.ACTIVE;
 import static faang.school.projectservice.model.CampaignStatus.CANCELED;
@@ -76,16 +77,17 @@ public class CampaignService {
     }
 
     public List<Campaign> getCampaignsByProjectIdAndFilter(Long projectId, CampaignFilterDto filter) {
+        CampaignFilterDto normalizedFilter = Objects.requireNonNullElseGet(filter, CampaignFilterDto::new);
         return campaignRepository.findAllByFiltersAndProjectId(projectId,
-                filter.getIdCreatedBy(),
-                filter.getTitlePattern(),
-                filter.getMinGoal(),
-                filter.getMaxGoal(),
-                filter.getCreatedDateFrom(),
-                filter.getCreatedDateTo(),
-                filter.getUpdatedDateFrom(),
-                filter.getUpdatedDateTo(),
-                filter.getStatus());
+                normalizedFilter.getIdCreatedBy(),
+                normalizedFilter.getTitlePattern(),
+                normalizedFilter.getMinGoal(),
+                normalizedFilter.getMaxGoal(),
+                normalizedFilter.getCreatedDateFrom(),
+                normalizedFilter.getCreatedDateTo(),
+                normalizedFilter.getUpdatedDateFrom(),
+                normalizedFilter.getUpdatedDateTo(),
+                normalizedFilter.getStatus());
     }
 
 }

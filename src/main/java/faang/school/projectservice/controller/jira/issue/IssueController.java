@@ -51,7 +51,7 @@ public class IssueController {
     }
 
     @GetMapping("/issue/{issueKey}")
-    public ResponseEntity<IssueDto> getIssueByKey(String issueKey) {
+    public ResponseEntity<IssueDto> getIssueByKey(@PathVariable String issueKey) {
         Issue responseIssue = issueService.getIssueByKey(issueKey);
         IssueDto responseIssueDto = issueMapper.toDto(responseIssue);
         return ResponseEntity.ok(responseIssueDto);

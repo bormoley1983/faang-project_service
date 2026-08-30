@@ -1,6 +1,5 @@
 package faang.school.projectservice.service;
 
-import org.jetbrains.annotations.NotNull;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
@@ -41,20 +40,18 @@ public class ResizedMultipartFile implements MultipartFile {
         return resizedImageBytes.length;
     }
 
-    @NotNull
     @Override
     public byte[] getBytes() throws IOException {
         return resizedImageBytes;
     }
 
-    @NotNull
     @Override
     public InputStream getInputStream() throws IOException {
         return new ByteArrayInputStream(resizedImageBytes);
     }
 
     @Override
-    public void transferTo(@NotNull java.io.File dest) throws IOException, IllegalStateException {
+    public void transferTo(java.io.File dest) throws IOException, IllegalStateException {
         throw new UnsupportedOperationException("Transfer to file is not supported");
     }
 }

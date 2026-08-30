@@ -5,6 +5,9 @@ import faang.school.projectservice.model.ProjectReport;
 import faang.school.projectservice.model.ProjectStatus;
 import faang.school.projectservice.repository.ProjectReportRepository;
 import faang.school.projectservice.repository.ProjectRepository;
+import faang.school.projectservice.service.s3.S3Service;
+import faang.school.projectservice.service.s3.StorageTransactionCoordinator;
+import faang.school.projectservice.dto.resource.S3FileDto;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.junit.jupiter.api.Test;
@@ -15,7 +18,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Optional;
@@ -41,7 +43,10 @@ public class ProjectReportServiceTest {
     private ProjectRepository projectRepository;
 
     @Mock
-    private MinioService minioService;
+    private S3Service s3Service;
+
+    @Mock
+    private StorageTransactionCoordinator storageTransactionCoordinator;
 
     @InjectMocks
     private ProjectReportService projectReportService;
@@ -50,7 +55,7 @@ public class ProjectReportServiceTest {
     void createProjectReportTest() {
         Long projectId = 1L;
         String fileName = "project_report_" + projectId + ".pdf";
-        String dummyUrl = "https://dummy-url.com/" + fileName;
+        String fileKey = "reports/generated_" + fileName;
 
         Resource dummyResource = new ByteArrayResource("dummy pdf content".getBytes());
         Project project = Project.builder()
@@ -66,22 +71,21 @@ public class ProjectReportServiceTest {
 
         when(projectRepository.findById(projectId)).thenReturn(Optional.ofNullable(project));
         when(pdfReportGeneratorService.generateProjectReport(eq(project))).thenReturn(dummyResource);
-        when(minioService.generatePresignedUrl(eq(fileName))).thenReturn(dummyUrl);
+        when(projectReportRepository.getReportByProjectId(projectId)).thenReturn(Optional.empty());
+        when(s3Service.uploadFile(any(), eq((long) "dummy pdf content".getBytes().length),
+                eq("application/pdf"), eq(fileName), eq("reports"))).thenReturn(fileKey);
         when(projectReportRepository.save(any(ProjectReport.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         ProjectReport result = projectReportService.createProjectReport(projectId);
 
-        verify(minioService).removePdfFromMinio(eq(fileName));
-        verify(minioService).uploadPdfToMinio(any(), eq(fileName));
-        verify(minioService).generatePresignedUrl(eq(fileName));
+        verify(storageTransactionCoordinator).deleteOnRollback(fileKey);
         verify(projectRepository).findById(eq(projectId));
         verify(pdfReportGeneratorService).generateProjectReport(eq(project));
         verify(projectReportRepository).save(any(ProjectReport.class));
 
         assertNotNull(result, "Returned ProjectReport should not be null");
         assertEquals(projectId, result.getProjectId(), "Project ID should match");
-        assertEquals(fileName, result.getFileKey(), "File key should match");
-        assertEquals(dummyUrl, result.getFileUrl(), "File URL should match");
+        assertEquals(fileKey, result.getFileKey(), "File key should match");
     }
 
     @Test
@@ -115,26 +119,28 @@ public class ProjectReportServiceTest {
     @Test
     void testGetUrlResourceValid() throws Exception {
         ProjectReport report = new ProjectReport();
-        String validUrl = "http://dummy-url.com/project_report_1.pdf";
-        report.setFileUrl(validUrl);
+        report.setFileKey("reports/project_report_1.pdf");
+        ByteArrayResource expected = new ByteArrayResource("pdf".getBytes());
+        S3FileDto file = new S3FileDto();
+        file.setInputStreamResource(new org.springframework.core.io.InputStreamResource(expected.getInputStream()));
+        when(s3Service.downloadFile(report.getFileKey())).thenReturn(file);
 
         Resource resource = projectReportService.getUrlResource(report);
 
         assertNotNull(resource);
 
-        URI resourceUri = resource.getURI();
-        assertEquals(URI.create(validUrl), resourceUri);
+        assertNotNull(resource);
     }
 
     @Test
     void testGetUrlResourceMalformedUrl() {
         ProjectReport report = new ProjectReport();
-        String invalidUrl = "ht@tp://invalid-url";
-        report.setFileUrl(invalidUrl);
+        report.setFileKey("missing");
+        when(s3Service.downloadFile("missing")).thenThrow(new RuntimeException("download failed"));
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
             projectReportService.getUrlResource(report);
         });
-        assertTrue(exception.getMessage().contains(invalidUrl));
+        assertTrue(exception.getMessage().contains("download failed"));
     }
 }

@@ -6,6 +6,8 @@ import faang.school.projectservice.repository.InternshipRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -135,13 +137,15 @@ class InternshipServiceTest {
         internship2.setId(2L);
         internship2.setStatus(InternshipStatus.COMPLETED);
 
-        when(internshipRepository.findAll()).thenReturn(List.of(internship, internship2));
+        when(internshipRepository.search(InternshipStatus.IN_PROGRESS, null, Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(List.of(internship)));
 
-        List<Internship> activeInternships = internshipService.getInternships(InternshipStatus.IN_PROGRESS, null);
+        List<Internship> activeInternships = internshipService
+                .getInternships(InternshipStatus.IN_PROGRESS, null, Pageable.unpaged()).getContent();
 
         assertEquals(1, activeInternships.size());
         assertEquals(1L, activeInternships.get(0).getId());
-        verify(internshipRepository, times(1)).findAll();
+        verify(internshipRepository).search(InternshipStatus.IN_PROGRESS, null, Pageable.unpaged());
     }
 
     @Test
@@ -149,11 +153,12 @@ class InternshipServiceTest {
         Internship internship2 = new Internship();
         internship2.setId(2L);
 
-        when(internshipRepository.findAll()).thenReturn(List.of(internship, internship2));
+        when(internshipRepository.search(null, null, Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(List.of(internship, internship2)));
 
-        List<Internship> allInternships = internshipService.getInternships(null, null);
+        List<Internship> allInternships = internshipService.getInternships(null, null, Pageable.unpaged()).getContent();
 
         assertEquals(2, allInternships.size());
-        verify(internshipRepository, times(1)).findAll();
+        verify(internshipRepository).search(null, null, Pageable.unpaged());
     }
 }

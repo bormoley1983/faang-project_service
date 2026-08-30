@@ -7,6 +7,7 @@ import faang.school.projectservice.repository.TeamMemberRepository;
 import faang.school.projectservice.repository.VacancyRepository;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
@@ -22,6 +23,7 @@ import org.slf4j.LoggerFactory;
     TestGoogleCalendarConfig.class
 })
 @ActiveProfiles("test")
+@Tag("integration")
 public class ProjectServiceApplicationTest {
 
     private final Logger log = LoggerFactory.getLogger(ProjectServiceApplicationTest.class);

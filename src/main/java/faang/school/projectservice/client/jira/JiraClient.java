@@ -4,24 +4,19 @@ import com.atlassian.jira.rest.client.api.IssueRestClient;
 import com.atlassian.jira.rest.client.api.JiraRestClient;
 import com.atlassian.jira.rest.client.api.SearchRestClient;
 import com.atlassian.jira.rest.client.internal.async.AsynchronousJiraRestClientFactory;
-import faang.school.projectservice.config.context.jira.JiraAuthContext;
+import faang.school.projectservice.config.jira.JiraProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
-import java.net.URI;
 
 @RequiredArgsConstructor
 @Component
 public class JiraClient {
-    private final JiraAuthContext jiraAuthContext;
+    private final JiraProperties jiraProperties;
 
     public JiraRestClient getJiraRestClient() {
-        String username = jiraAuthContext.getUsername();
-        String password = jiraAuthContext.getPassword();
-        String baseUrl = jiraAuthContext.getBaseUrl();
-
         return new AsynchronousJiraRestClientFactory()
-                .createWithBasicHttpAuthentication(URI.create(baseUrl), username, password);
+                .createWithBasicHttpAuthentication(jiraProperties.validatedBaseUri(),
+                        jiraProperties.getUsername(), jiraProperties.getPassword());
     }
 
     public IssueRestClient getIssueClient() {

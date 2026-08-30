@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.Optional;
+import faang.school.projectservice.exception.CalendarIntegrationException;
 
 @Service
 public class GoogleCalendarService {
@@ -31,8 +32,7 @@ public class GoogleCalendarService {
         try {
             return calendar.get().events().insert(calendarId, event).execute();
         } catch (IOException e) {
-            logger.error("Failed to create event in calendar: {}", calendarId, e);
-            return null;
+            throw failure("create event in calendar " + calendarId, e);
         }
     }
 
@@ -44,8 +44,7 @@ public class GoogleCalendarService {
         try {
             return calendar.get().events().get(calendarId, eventId).execute();
         } catch (IOException e) {
-            logger.error("Failed to get event from calendar: {} with event ID: {}", calendarId, eventId, e);
-            return null;
+            throw failure("get event " + eventId + " from calendar " + calendarId, e);
         }
     }
 
@@ -57,21 +56,33 @@ public class GoogleCalendarService {
         try {
             calendar.get().events().delete(calendarId, eventId).execute();
         } catch (IOException e) {
-            logger.error("Failed to delete event from calendar: {} with event ID: {}", calendarId, eventId, e);
+            throw failure("delete event " + eventId + " from calendar " + calendarId, e);
         }
     }
 
-    public com.google.api.services.calendar.model.Calendar createCalendar(com.google.api.services.calendar.model.Calendar calendarToCreate) {
+    public Optional<com.google.api.services.calendar.model.Calendar> createCalendar(
+            com.google.api.services.calendar.model.Calendar calendarToCreate) {
         if (calendar.isEmpty()) {
             logger.warn("Cannot create calendar - Google Calendar service not available");
-            return null;
+            return Optional.empty();
         }
         try {
-            calendar.get().calendars().insert(calendarToCreate).execute();
-            return calendarToCreate;
+            return Optional.ofNullable(calendar.get().calendars().insert(calendarToCreate).execute());
         } catch (IOException e) {
-            logger.error("Failed to create calendar", e);
-            return null;
+            throw failure("create calendar", e);
+        }
+    }
+
+    public boolean deleteCalendar(String calendarId) {
+        if (calendar.isEmpty()) {
+            logger.warn("Cannot delete calendar - Google Calendar service not available");
+            return false;
+        }
+        try {
+            calendar.get().calendars().delete(calendarId).execute();
+            return true;
+        } catch (IOException e) {
+            throw failure("delete calendar " + calendarId, e);
         }
     }
 
@@ -83,20 +94,20 @@ public class GoogleCalendarService {
         try {
             return calendar.get().calendarList().get(calendarId).execute();
         } catch (IOException e) {
-            logger.error("Failed to get calendar: {}", calendarId, e);
-            return null;
+            throw failure("get calendar " + calendarId, e);
         }
     }
 
-    public void createAcl(String calendarId, com.google.api.services.calendar.model.AclRule aclRule) {
+    public boolean createAcl(String calendarId, com.google.api.services.calendar.model.AclRule aclRule) {
         if (calendar.isEmpty()) {
             logger.warn("Cannot create ACL - Google Calendar service not available");
-            return;
+            return false;
         }
         try {
             calendar.get().acl().insert(calendarId, aclRule).execute();
+            return true;
         } catch (IOException e) {
-            logger.error("Failed to create ACL for calendar: {}", calendarId, e);
+            throw failure("create ACL for calendar " + calendarId, e);
         }
     }
 
@@ -108,8 +119,7 @@ public class GoogleCalendarService {
         try {
             return calendar.get().acl().get(calendarId, ruleId).execute();
         } catch (IOException e) {
-            logger.error("Failed to get ACL for calendar: {} with rule ID: {}", calendarId, ruleId, e);
-            return null;
+            throw failure("get ACL " + ruleId + " for calendar " + calendarId, e);
         }
     }
 
@@ -121,7 +131,12 @@ public class GoogleCalendarService {
         try {
             calendar.get().acl().delete(calendarId, ruleId).execute();
         } catch (IOException e) {
-            logger.error("Failed to delete ACL for calendar: {} with rule ID: {}", calendarId, ruleId, e);
+            throw failure("delete ACL " + ruleId + " for calendar " + calendarId, e);
         }
+    }
+
+    private CalendarIntegrationException failure(String operation, IOException cause) {
+        logger.error("Google Calendar operation failed: {}", operation, cause);
+        return new CalendarIntegrationException("Failed to " + operation, cause);
     }
 }

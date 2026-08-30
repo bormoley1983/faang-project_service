@@ -72,7 +72,6 @@ dependencies {
      */
     implementation(platform("software.amazon.awssdk:bom:2.54.6"))
     implementation("software.amazon.awssdk:s3")
-    implementation("io.minio:minio:8.6.0")
 
     /**
      * Google calendar API

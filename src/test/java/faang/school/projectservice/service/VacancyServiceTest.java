@@ -17,6 +17,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -98,6 +100,10 @@ public class VacancyServiceTest {
         Long userId = 1L;
         Long vacancyId = 1L;
         Long projectId = 1L;
+        Project project = Project.builder().id(projectId).ownerId(userId).build();
+        vacancy.setProject(project);
+        firstCandidate.setUserId(10L);
+        secondCandidate.setUserId(11L);
 
         ArgumentCaptor<Vacancy> vacancyCaptor = ArgumentCaptor.forClass(Vacancy.class);
 
@@ -118,10 +124,12 @@ public class VacancyServiceTest {
         Long vacancyId = 1L;
         Long userId = 1L;
 
-        Mockito.when(vacancyRepository.existsById(vacancyId)).thenReturn(true);
+        Vacancy vacancy = new Vacancy();
+        vacancy.setProject(Project.builder().id(1L).ownerId(userId).build());
+        Mockito.when(vacancyRepository.findById(vacancyId)).thenReturn(Optional.of(vacancy));
 
         vacancyService.removeVacancy(vacancyId, userId);
-        Mockito.verify(vacancyRepository, Mockito.times(1)).deleteById(vacancyId);
+        Mockito.verify(vacancyRepository).delete(vacancy);
     }
 
     @Test
@@ -129,11 +137,11 @@ public class VacancyServiceTest {
         Long vacancyId = 1L;
         Long userId = 1L;
 
-        Mockito.when(vacancyRepository.existsById(vacancyId)).thenReturn(false);
+        Mockito.when(vacancyRepository.findById(vacancyId)).thenReturn(Optional.empty());
 
         Assertions.assertThrows(VacancyNotFoundException.class, () ->
                 vacancyService.removeVacancy(vacancyId, userId));
-        Mockito.verify(vacancyRepository, Mockito.times(0)).deleteById(vacancyId);
+        Mockito.verify(vacancyRepository, Mockito.never()).delete(Mockito.any());
     }
 
     @Test
@@ -157,9 +165,11 @@ public class VacancyServiceTest {
         vacanciesExpected.add(firstVacancy);
         vacanciesExpected.add(secondVacancy);
 
-        Mockito.when(vacancyRepository.findAll()).thenReturn(vacanciesAll);
+        Mockito.when(vacancyRepository.search(position, name, Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(vacanciesExpected));
 
-        Assertions.assertEquals(vacanciesExpected, vacancyService.filterVacancies(position, name));
+        Assertions.assertEquals(vacanciesExpected,
+                vacancyService.filterVacancies(position, name, Pageable.unpaged()).getContent());
     }
 
     @Test
@@ -168,10 +178,9 @@ public class VacancyServiceTest {
         String name = "vacancy name";
         List<Vacancy> vacanciesAll = new ArrayList<>();
 
-        Mockito.when(vacancyRepository.findAll()).thenReturn(vacanciesAll);
-
-        Assertions.assertThrows(VacancyNotFoundException.class, () ->
-                vacancyService.filterVacancies(position, name));
+        Mockito.when(vacancyRepository.search(position, name, Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(vacanciesAll));
+        Assertions.assertTrue(vacancyService.filterVacancies(position, name, Pageable.unpaged()).isEmpty());
     }
 
     @Test

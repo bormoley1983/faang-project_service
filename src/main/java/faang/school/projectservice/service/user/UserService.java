@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Slf4j
 @RequiredArgsConstructor
 @Service
@@ -25,6 +27,14 @@ public class UserService {
             throw new UserClientException("User client failed");
         }
 
+        return response.getBody();
+    }
+
+    public List<UserDto> getUsers(List<Long> userIds) {
+        ResponseEntity<List<UserDto>> response = userServiceClient.getUsersByIds(userIds);
+        if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+            throw new UserClientException("User client failed to return meet participants");
+        }
         return response.getBody();
     }
 }

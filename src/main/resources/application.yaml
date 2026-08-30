@@ -67,6 +67,11 @@ services:
   user-service:
     host: ${USER_SERVICE_HOST:http://localhost}
     port: ${USER_SERVICE_PORT:8080}
+  jira:
+    base-url: ${JIRA_BASE_URL:}
+    username: ${JIRA_USERNAME:}
+    password: ${JIRA_PASSWORD:}
+    allowed-hosts: ${JIRA_ALLOWED_HOSTS:}
 
 calculations_messages_processing:
   enabled: true

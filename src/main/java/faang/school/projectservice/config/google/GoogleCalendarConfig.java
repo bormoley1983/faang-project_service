@@ -5,6 +5,10 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.calendar.Calendar;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.ServiceAccountCredentials;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,43 +26,70 @@ import org.slf4j.LoggerFactory;
 @Profile("!test")
 public class GoogleCalendarConfig {
     private static final Logger logger = LoggerFactory.getLogger(GoogleCalendarConfig.class);
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final String CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar";
 
-    @Value("${google.calendar.application-name}")
-    private String applicationName;
-
-    @Value("${google.calendar.credentials-json:}")
-    private String credentialsJson;
+    private final String applicationName;
+    private final String credentialsJson;
 
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
+    public GoogleCalendarConfig(
+            @Value("${google.calendar.application-name}") String applicationName,
+            @Value("${google.calendar.credentials-json:}") String credentialsJson) {
+        this.applicationName = applicationName;
+        this.credentialsJson = credentialsJson;
+    }
+
     @Bean
     @ConditionalOnProperty(name = "google.calendar.enabled", havingValue = "true")
-    public Calendar calendarService() throws IOException {
-        if (credentialsJson == null || credentialsJson.trim().isEmpty() || !isValidCredentials()) {
-            logger.warn("Google Calendar credentials not configured or invalid. Calendar service will not be available.");
-            return null;
+    public Calendar calendarService() {
+        if (credentialsJson == null || credentialsJson.isBlank()) {
+            throw new IllegalStateException(
+                    "Google Calendar is enabled but service-account credentials are not configured");
         }
 
         try {
-            GoogleCredentials credentials = GoogleCredentials.fromStream(
+            validateCredentialsJson(credentialsJson);
+            GoogleCredentials credentials = ServiceAccountCredentials.fromStream(
                     new ByteArrayInputStream(credentialsJson.getBytes(StandardCharsets.UTF_8)))
-                    .createScoped(Collections.singleton("https://www.googleapis.com/auth/calendar"));
+                    .createScoped(Collections.singleton(CALENDAR_SCOPE));
             return new Calendar.Builder(new com.google.api.client.http.javanet.NetHttpTransport(),
                     JSON_FACTORY, new HttpCredentialsAdapter(credentials))
                     .setApplicationName(applicationName)
                     .build();
-        } catch (IOException e) {
-            logger.error("Failed to initialize Google Calendar service with provided credentials", e);
-            throw e;
+        } catch (IOException | IllegalArgumentException e) {
+            logger.error("Failed to initialize Google Calendar service with configured credentials", e);
+            throw new IllegalStateException("Google Calendar service-account credentials are invalid", e);
         }
     }
 
-    private boolean isValidCredentials() {
+    static void validateCredentialsJson(String credentialsJson) {
         try {
-            return credentialsJson.contains("\"private_key\"") && 
-                   !credentialsJson.contains("private_key\":");
-        } catch (Exception e) {
-            return false;
+            JsonNode credentials = OBJECT_MAPPER.readTree(credentialsJson);
+            requireText(credentials, "type", "service_account");
+            requireText(credentials, "client_email", null);
+            String privateKey = requireText(credentials, "private_key", null);
+            if (!privateKey.contains("-----BEGIN PRIVATE KEY-----")
+                    || !privateKey.contains("-----END PRIVATE KEY-----")) {
+                throw new IllegalArgumentException("Google credentials private_key is not a PEM private key");
+            }
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("Google credentials are not valid JSON", e);
         }
+    }
+
+    private static String requireText(JsonNode credentials, String field, String expectedValue) {
+        if (credentials == null || !credentials.isObject()) {
+            throw new IllegalArgumentException("Google credentials must be a JSON object");
+        }
+        JsonNode value = credentials.get(field);
+        if (value == null || !value.isTextual() || value.textValue().isBlank()) {
+            throw new IllegalArgumentException("Google credentials field is missing or blank: " + field);
+        }
+        if (expectedValue != null && !expectedValue.equals(value.textValue())) {
+            throw new IllegalArgumentException("Google credentials field has an unsupported value: " + field);
+        }
+        return value.textValue();
     }
 }

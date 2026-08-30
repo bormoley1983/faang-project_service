@@ -1,12 +1,14 @@
 package faang.school.projectservice.service;
 
 import faang.school.projectservice.config.ProjectProperties;
+import faang.school.projectservice.event.ProjectCalendarProvisioningRequested;
 import faang.school.projectservice.model.Project;
 import faang.school.projectservice.model.ProjectStatus;
+import faang.school.projectservice.model.Schedule;
 import faang.school.projectservice.model.Resource;
 import faang.school.projectservice.repository.ProjectRepository;
-import faang.school.projectservice.service.google.GoogleCalendarService;
 import faang.school.projectservice.service.s3.S3Service;
+import faang.school.projectservice.service.s3.StorageTransactionCoordinator;
 import faang.school.projectservice.validator.FileValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +17,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -39,10 +45,16 @@ class ProjectServiceTest {
     private ProjectRepository projectRepository;
 
     @Mock
-    private GoogleCalendarService googleCalendarService;
+    private ProjectAuthorizationService projectAuthorizationService;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @Mock
     private S3Service s3Service;
+
+    @Mock
+    private StorageTransactionCoordinator storageTransactionCoordinator;
 
     @Mock
     private FileValidator fileValidator;
@@ -78,14 +90,26 @@ class ProjectServiceTest {
     void createProject_ShouldSaveAndReturnProject() {
         when(projectRepository.existsByOwnerIdAndName(project.getOwnerId(), project.getName())).thenReturn(false);
         when(projectRepository.save(any(Project.class))).thenReturn(project);
-        when(googleCalendarService.createCalendar(any())).thenReturn(new com.google.api.services.calendar.model.Calendar());
-
         Project result = projectService.createProject(project, project.getOwnerId());
 
         assertNotNull(result);
         assertEquals("Test Project", result.getName());
         verify(projectRepository, times(1)).save(project);
-        verify(googleCalendarService, times(1)).createCalendar(any());
+        verify(eventPublisher).publishEvent(
+                new ProjectCalendarProvisioningRequested(project.getId(), project.getName()));
+    }
+
+    @Test
+    void createProject_DoesNotCallCalendarBeforeDatabaseCommit() {
+        when(projectRepository.existsByOwnerIdAndName(project.getOwnerId(), project.getName())).thenReturn(false);
+        when(projectRepository.save(any(Project.class))).thenReturn(project);
+
+        Project result = projectService.createProject(project, project.getOwnerId());
+
+        assertNotNull(result);
+        assertNull(result.getGoogleCalendarId());
+        verify(projectRepository).save(project);
+        verify(eventPublisher).publishEvent(any(ProjectCalendarProvisioningRequested.class));
     }
 
     @Test
@@ -101,13 +125,24 @@ class ProjectServiceTest {
 
     @Test
     void updateProject_ShouldUpdateAndReturnProject() {
+        Schedule persistedSchedule = new Schedule();
+        persistedSchedule.setGoogleEventId("persisted-schedule-event");
+        project.setSchedule(persistedSchedule);
+        project.setGoogleCalendarId("persisted-calendar");
         when(projectRepository.findById(project.getId())).thenReturn(Optional.of(project));
         when(projectRepository.save(any(Project.class))).thenReturn(project);
 
-        Project updatedProject = projectService.updateProject(project);
+        Project metadataUpdate = Project.builder()
+                .id(project.getId())
+                .name("Renamed Project")
+                .description("Updated description")
+                .build();
+        Project updatedProject = projectService.updateProject(metadataUpdate, 1L);
 
         assertNotNull(updatedProject);
-        assertEquals("Test Project", updatedProject.getName());
+        assertEquals("Renamed Project", updatedProject.getName());
+        assertEquals("persisted-calendar", updatedProject.getGoogleCalendarId());
+        assertEquals(persistedSchedule, updatedProject.getSchedule());
         verify(projectRepository, times(1)).save(project);
     }
 
@@ -116,10 +151,66 @@ class ProjectServiceTest {
         when(projectRepository.findById(project.getId())).thenReturn(Optional.empty());
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> projectService.updateProject(project));
+                () -> projectService.updateProject(project, 1L));
 
         assertEquals("Project not found", exception.getMessage());
         verify(projectRepository, never()).save(any(Project.class));
+    }
+
+    @Test
+    void getProjectsPassesFiltersAndViewerToVisibilityQuery() {
+        PageRequest pageable = PageRequest.of(0, 20);
+        Page<Project> expected = new PageImpl<>(java.util.List.of(project), pageable, 1);
+        when(projectRepository.findVisibleProjects(
+                "Roadmap", ProjectStatus.CREATED, 7L, pageable)).thenReturn(expected);
+
+        Page<Project> result = projectService.getProjects(
+                "  Roadmap  ", ProjectStatus.CREATED, 7L, pageable);
+
+        assertEquals(expected, result);
+        verify(projectRepository).findVisibleProjects(
+                "Roadmap", ProjectStatus.CREATED, 7L, pageable);
+    }
+
+    @Test
+    void getSubProjectsNormalizesBlankNameAndPassesViewerToVisibilityQuery() {
+        PageRequest pageable = PageRequest.of(0, 20);
+        Page<Project> expected = Page.empty(pageable);
+        when(projectRepository.findVisibleSubProjects(
+                5L, null, null, 7L, pageable)).thenReturn(expected);
+
+        Page<Project> result = projectService.getSubProjects(5L, "  ", null, 7L, pageable);
+
+        assertEquals(expected, result);
+        verify(projectRepository).findVisibleSubProjects(5L, null, null, 7L, pageable);
+    }
+
+    @Test
+    void getProjectsByIdsRejectsPartialRepositoryResult() {
+        Project first = Project.builder().id(1L).build();
+        when(projectRepository.findAllById(java.util.Set.of(1L, 2L)))
+                .thenReturn(java.util.List.of(first));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> projectService.getProjectsByIds(java.util.List.of(1L, 2L), 7L));
+
+        assertEquals("Projects not found: [2]", exception.getMessage());
+        verify(projectAuthorizationService, never()).requireViewAccess(any(), org.mockito.ArgumentMatchers.anyLong());
+    }
+
+    @Test
+    void getProjectsByIdsAuthorizesEveryCompleteResult() {
+        Project first = Project.builder().id(1L).build();
+        Project second = Project.builder().id(2L).build();
+        when(projectRepository.findAllById(java.util.Set.of(1L, 2L)))
+                .thenReturn(java.util.List.of(first, second));
+
+        java.util.List<Project> result = projectService.getProjectsByIds(
+                java.util.List.of(1L, 2L, 2L), 7L);
+
+        assertEquals(java.util.List.of(first, second), result);
+        verify(projectAuthorizationService).requireViewAccess(first, 7L);
+        verify(projectAuthorizationService).requireViewAccess(second, 7L);
     }
 
     @Test
@@ -156,7 +247,7 @@ class ProjectServiceTest {
         when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
         when(s3Service.uploadFile(any(), anyString())).thenReturn(new Resource());
 
-        projectService.uploadProjectCover(1L, file);
+        projectService.uploadProjectCover(1L, file, 1L);
 
         verify(fileValidator).validateFile(file);
         verify(imageResizer).resizeImage(mockImageBytes, 1080, 566);
@@ -168,7 +259,7 @@ class ProjectServiceTest {
     void uploadProjectCover_ProjectNotFound() {
         when(projectRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> projectService.uploadProjectCover(1L, file));
+        assertThrows(IllegalArgumentException.class, () -> projectService.uploadProjectCover(1L, file, 1L));
     }
 
     @Test
@@ -176,7 +267,7 @@ class ProjectServiceTest {
         project.setCoverImageId("existing-cover-key");
         when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
 
-        assertThrows(IllegalStateException.class, () -> projectService.uploadProjectCover(1L, file));
+        assertThrows(IllegalStateException.class, () -> projectService.uploadProjectCover(1L, file, 1L));
     }
 
     @Test
@@ -184,7 +275,7 @@ class ProjectServiceTest {
         when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
         when(file.getBytes()).thenThrow(IOException.class);
 
-        assertThrows(RuntimeException.class, () -> projectService.uploadProjectCover(1L, file));
+        assertThrows(RuntimeException.class, () -> projectService.uploadProjectCover(1L, file, 1L));
     }
 
     @Test
@@ -192,9 +283,9 @@ class ProjectServiceTest {
         project.setCoverImageId("cover-key");
         when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
 
-        projectService.deleteCover(1L);
+        projectService.deleteCover(1L, 1L);
 
-        verify(s3Service).deleteFile("cover-key");
+        verify(storageTransactionCoordinator).deleteAfterCommit("cover-key");
         assertNull(project.getCoverImageId());
     }
 
@@ -202,7 +293,7 @@ class ProjectServiceTest {
     void deleteCover_ProjectNotFound() {
         when(projectRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> projectService.deleteCover(1L));
+        assertThrows(IllegalArgumentException.class, () -> projectService.deleteCover(1L, 1L));
     }
 
     @Test
@@ -210,6 +301,6 @@ class ProjectServiceTest {
         project.setCoverImageId(null);
         when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
 
-        assertThrows(IllegalStateException.class, () -> projectService.deleteCover(1L));
+        assertThrows(IllegalStateException.class, () -> projectService.deleteCover(1L, 1L));
     }
 }

@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,8 +45,8 @@ public class ProjectController {
 
     @PostMapping("/subprojects")
     public ResponseEntity<ProjectResponseDto> createSubProject(
-            @Valid @RequestBody CreateSubProjectDto subProjectDto,
-            @RequestHeader("x-user-id") Long ownerId) {
+            @Valid @RequestBody CreateSubProjectDto subProjectDto) {
+        Long ownerId = userContext.getUserId();
         Project subProject = projectMapper.toEntity(subProjectDto);
         Project createdSubProject = projectService.createSubProject(subProject, ownerId);
         return ResponseEntity.ok(projectMapper.toDto(createdSubProject));
@@ -59,7 +58,7 @@ public class ProjectController {
             @Valid @RequestBody CreateProjectRequestDto projectRequestDto) {
         Project updatedProject = projectMapper.toEntity(projectRequestDto);
         updatedProject.setId(projectId);
-        Project result = projectService.updateProject(updatedProject);
+        Project result = projectService.updateProject(updatedProject, userContext.getUserId());
         return ResponseEntity.ok(projectMapper.toDto(result));
     }
 
@@ -69,7 +68,7 @@ public class ProjectController {
             @Valid @RequestBody CreateSubProjectDto subProjectDto) {
         Project updatedSubProject = projectMapper.toEntity(subProjectDto);
         updatedSubProject.setId(subProjectId);
-        Project result = projectService.updateSubProject(updatedSubProject);
+        Project result = projectService.updateSubProject(updatedSubProject, userContext.getUserId());
         return ResponseEntity.ok(projectMapper.toDto(result));
     }
 
@@ -89,26 +88,27 @@ public class ProjectController {
             @RequestParam(required = false) String name,
             @RequestParam(required = false) ProjectStatus status,
             Pageable pageable) {
-        Page<Project> subProjects = projectService.getSubProjects(parentProjectId, name, status, pageable);
+        Long userId = userContext.getUserId();
+        Page<Project> subProjects = projectService.getSubProjects(parentProjectId, name, status, userId, pageable);
         return ResponseEntity.ok(subProjects.map(projectMapper::toDto));
     }
 
     @GetMapping("/{projectId}")
     public ResponseEntity<ProjectResponseDto> getProjectById(@PathVariable Long projectId) {
-        Project project = projectService.getProjectById(projectId);
+        Project project = projectService.getProjectById(projectId, userContext.getUserId());
         return ResponseEntity.ok(projectMapper.toDto(project));
     }
 
     @PostMapping(value = "/{projectId}/cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> uploadCover(@PathVariable Long projectId,
                                               @RequestParam("file") MultipartFile file) {
-        projectService.uploadProjectCover(projectId, file);
+        projectService.uploadProjectCover(projectId, file, userContext.getUserId());
         return ResponseEntity.ok("Cover uploaded successfully");
     }
 
     @DeleteMapping("/{projectId}/cover")
     public ResponseEntity<String> deleteCover(@PathVariable Long projectId) {
-        projectService.deleteCover(projectId);
+        projectService.deleteCover(projectId, userContext.getUserId());
         return ResponseEntity.ok("Cover deleted successfully");
     }
 }

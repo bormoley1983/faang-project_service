@@ -168,4 +168,15 @@ public class CampaignServiceTest {
         assertNotNull(result);
         assertTrue(result.isEmpty());
     }
+
+    @Test
+    void getCampaignsByProjectIdAndFilter_NormalizesNullFilter() {
+        when(campaignRepository.findAllByFiltersAndProjectId(
+                project.getId(), null, null, null, null, null, null, null, null, null))
+                .thenReturn(List.of(campaign));
+
+        List<Campaign> result = campaignService.getCampaignsByProjectIdAndFilter(project.getId(), null);
+
+        assertEquals(List.of(campaign), result);
+    }
 }

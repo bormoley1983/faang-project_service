@@ -6,22 +6,22 @@ import faang.school.projectservice.model.Project;
 import faang.school.projectservice.model.ProjectReport;
 import faang.school.projectservice.repository.ProjectReportRepository;
 import faang.school.projectservice.repository.ProjectRepository;
+import faang.school.projectservice.service.s3.S3Service;
+import faang.school.projectservice.service.s3.StorageTransactionCoordinator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URI;
 
 @RequiredArgsConstructor
 @Service
 public class ProjectReportService {
-    private final MinioService minioService;
+    private final S3Service s3Service;
+    private final StorageTransactionCoordinator storageTransactionCoordinator;
     private final ProjectReportRepository projectReportRepository;
     private final PdfReportGeneratorService pdfReportGeneratorService;
     private final ProjectRepository projectRepository;
@@ -29,25 +29,27 @@ public class ProjectReportService {
     @Transactional
     public ProjectReport createProjectReport(Long projectId) {
         String fileName = "project_report_" + projectId + ".pdf";
-        Boolean removeFile = minioService.removePdfFromMinio(fileName);
-        if (removeFile){
-            projectReportRepository.deleteReportByProjectId(projectId);
-        }
+        ProjectReport projectReport = projectReportRepository.getReportByProjectId(projectId)
+                .orElseGet(ProjectReport::new);
+        String oldKey = projectReport.getFileKey();
         Resource pdfResource = generateAndUploadProjectReport(projectId);
+        String fileKey;
         try {
-            minioService.uploadPdfToMinio(pdfResource.getInputStream(), fileName);
+            fileKey = s3Service.uploadFile(pdfResource.getInputStream(), pdfResource.contentLength(),
+                    "application/pdf", fileName, "reports");
         } catch (IOException e) {
-            throw new RuntimeException("Error uploading PDF to Minio for project " + projectId, e);
+            throw new RuntimeException("Error reading PDF for project " + projectId, e);
         }
+        storageTransactionCoordinator.deleteOnRollback(fileKey);
 
-        String fileUrl = minioService.generatePresignedUrl(fileName);
-
-        ProjectReport projectReport = new ProjectReport();
         projectReport.setProjectId(projectId);
-        projectReport.setFileKey(fileName);
-        projectReport.setFileUrl(fileUrl);
+        projectReport.setFileKey(fileKey);
+        projectReport.setFileUrl(null);
 
         projectReportRepository.save(projectReport);
+        if (oldKey != null) {
+            storageTransactionCoordinator.deleteAfterCommit(oldKey);
+        }
         return projectReport;
     }
 
@@ -63,16 +65,7 @@ public class ProjectReportService {
     }
 
     public Resource getUrlResource(ProjectReport projectReport) {
-        String fileUrl = projectReport.getFileUrl();
-
-        URI fileUri = URI.create(fileUrl);
-        Resource resource;
-        try {
-            resource = new UrlResource(fileUri);
-        } catch (MalformedURLException e) {
-            throw new RuntimeException("Error URL file: {} " + fileUri, e);
-        }
-        return resource;
+        return s3Service.downloadFile(projectReport.getFileKey()).getInputStreamResource();
     }
 
     public long getContentLength(Resource resource) {

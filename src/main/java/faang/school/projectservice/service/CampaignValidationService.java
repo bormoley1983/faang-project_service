@@ -1,6 +1,7 @@
 package faang.school.projectservice.service;
 
 import faang.school.projectservice.dto.campaign.CampaignDto;
+import faang.school.projectservice.exception.AccessDeniedException;
 import faang.school.projectservice.model.Campaign;
 import faang.school.projectservice.model.Project;
 import faang.school.projectservice.model.TeamMember;
@@ -26,13 +27,7 @@ public class CampaignValidationService {
             throw new IllegalArgumentException("Title of the campaign cannot be empty");
         }
 
-        TeamMember creator = getTeamMemberByUserIdAndProjectId(userId, project.getId());
-
-        if (!Objects.equals(project.getOwnerId(), userId) && !creator.getRoles().contains(TeamRole.MANAGER)) {
-            String exceptionMessage = String.format("User with id %d cannot create a fundraising! " +
-                    "Only the project owner or a manager can create a campaign", userId);
-            throw new UnsupportedOperationException(exceptionMessage);
-        }
+        requireOwnerOrManager(project, userId);
     }
 
     public void validateUserCanUpdateCampaign(Campaign campaign, Long userId, CampaignDto campaignDto) {
@@ -55,11 +50,11 @@ public class CampaignValidationService {
             throw new IllegalArgumentException("Project of the campaign cannot be changed");
         }
 
-        getTeamMemberByUserIdAndProjectId(userId, campaign.getProject().getId());
+        requireOwnerOrManager(campaign.getProject(), userId);
     }
 
     public void validateUserCanDeleteCampaign(Campaign campaign, Long userId) {
-        getTeamMemberByUserIdAndProjectId(userId, campaign.getProject().getId());
+        requireOwnerOrManager(campaign.getProject(), userId);
 
         if (campaign.getStatus() == CANCELED) {
             throw new UnsupportedOperationException("Campaign is already canceled");
@@ -72,5 +67,17 @@ public class CampaignValidationService {
                     String exceptionMessage = String.format("User with id %d is not a team member of project with id %d", userId, projectId);
                     return new NoSuchElementException(exceptionMessage);
                 });
+    }
+
+    private void requireOwnerOrManager(Project project, Long userId) {
+        if (Objects.equals(project.getOwnerId(), userId)) {
+            return;
+        }
+
+        TeamMember member = getTeamMemberByUserIdAndProjectId(userId, project.getId());
+        if (member.getRoles() == null || !member.getRoles().contains(TeamRole.MANAGER)) {
+            throw new AccessDeniedException(
+                    "Only the project owner or a project manager may modify campaigns");
+        }
     }
 }

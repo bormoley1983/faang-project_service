@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,19 +33,19 @@ public class ResourceController {
     private final UserContext userContext;
     private final ResourceMapper resourceMapper;
 
-    @PostMapping("/{projectId}")
+    @PostMapping(value = "/{projectId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ResourceDto> addResource(
-            @PathVariable @Positive Long projectId, @RequestBody MultipartFile file) {
+            @PathVariable @Positive Long projectId, @RequestPart("file") MultipartFile file) {
         Long userId = userContext.getUserId();
         Resource resource = resourceService.addResource(projectId, userId, file);
         ResourceDto resourceDto = resourceMapper.toDto(resource);
         return ResponseEntity.ok(resourceDto);
     }
 
-    @PatchMapping("/{projectId}/{resourceId}")
+    @PatchMapping(value = "/{projectId}/{resourceId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ResourceDto> updateResource(
             @PathVariable @Positive Long projectId,
-            @PathVariable @Positive Long resourceId, @RequestBody MultipartFile file) {
+            @PathVariable @Positive Long resourceId, @RequestPart("file") MultipartFile file) {
         Long userId = userContext.getUserId();
         Resource resource = resourceService.updateResource(resourceId, projectId, userId, file);
         ResourceDto resourceDto = resourceMapper.toDto(resource);

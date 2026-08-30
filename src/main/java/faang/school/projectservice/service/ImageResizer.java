@@ -18,6 +18,9 @@ public class ImageResizer {
              ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
 
             BufferedImage originalImage = ImageIO.read(inputStream);
+            if (originalImage == null) {
+                throw new ImageResizeException("Unsupported or invalid image data", null);
+            }
             BufferedImage resizedImage = Scalr.resize(
                     originalImage,
                     Scalr.Method.QUALITY,

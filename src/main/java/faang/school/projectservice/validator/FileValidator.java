@@ -6,8 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Objects;
-
 @RequiredArgsConstructor
 public class FileValidator {
     private final long maxFileSize;
@@ -17,7 +15,8 @@ public class FileValidator {
             throw new EmptyFileException("File is empty or null");
         }
 
-        if (!Objects.requireNonNull(file.getContentType()).equalsIgnoreCase("image/jpeg")) {
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.equalsIgnoreCase("image/jpeg")) {
             throw new InvalidFileFormatException("Only JPEG images are allowed");
         }
 

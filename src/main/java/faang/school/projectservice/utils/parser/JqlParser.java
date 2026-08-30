@@ -8,8 +8,6 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 
-import static javax.naming.ldap.Rdn.escapeValue;
-
 @Slf4j
 @Component
 public class JqlParser {
@@ -22,31 +20,31 @@ public class JqlParser {
         List<String> jqlParts = new ArrayList<>();
 
         if (filters.getTypeIdPattern() != null) {
-            jqlParts.add(String.format("issueType = '%s'", filters.getTypeIdPattern()));
+            jqlParts.add("issueType = " + quote(filters.getTypeIdPattern().toString()));
         }
 
         if (StringUtils.hasText(filters.getSummaryPattern())) {
-            String summaryPattern = escapeValue(filters.getSummaryPattern());
-            jqlParts.add(String.format("summary ~ '%s'", summaryPattern));
+            jqlParts.add("summary ~ " + quote(filters.getSummaryPattern()));
         }
 
         if (StringUtils.hasText(filters.getDescriptionPattern())) {
-            String descriptionPattern = escapeValue(filters.getDescriptionPattern());
-            jqlParts.add(String.format("description ~ '%s'", descriptionPattern));
+            jqlParts.add("description ~ " + quote(filters.getDescriptionPattern()));
         }
 
         if (StringUtils.hasText(filters.getAssigneeNamePattern())) {
-            String assigneePattern = escapeValue(filters.getAssigneeNamePattern());
-            jqlParts.add(String.format("assignee = '%s'", assigneePattern));
+            jqlParts.add("assignee = " + quote(filters.getAssigneeNamePattern()));
         }
 
         if (StringUtils.hasText(filters.getReporterNamePattern())) {
-            String reporterPattern = escapeValue(filters.getReporterNamePattern());
-            jqlParts.add(String.format("reporter = '%s'", reporterPattern));
+            jqlParts.add("reporter = " + quote(filters.getReporterNamePattern()));
         }
 
         String jql = String.join(" AND ", jqlParts);
         log.debug("Generated JQL: {}", jql);
         return jql;
+    }
+
+    private String quote(String value) {
+        return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 }

@@ -37,3 +37,5 @@ databaseChangeLog:
       file: db/changelog/changeset/project_V021_add_meet_end_time.sql
   - include:
       file: db/changelog/changeset/project_V022_donation_intents.sql
+  - include:
+      file: db/changelog/changeset/project_V023_project_version.sql

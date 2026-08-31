@@ -9,12 +9,16 @@ import java.util.Set;
 @Component
 @ConfigurationProperties(prefix = "services.jira")
 public class JiraProperties {
+    private boolean enabled;
     private String baseUrl;
     private String username;
     private String password;
     private Set<String> allowedHosts = Set.of();
 
     public URI validatedBaseUri() {
+        if (!enabled) {
+            throw new IllegalStateException("Jira integration is disabled");
+        }
         if (baseUrl == null || username == null || password == null) {
             throw new IllegalStateException("Jira integration is not configured");
         }
@@ -26,6 +30,8 @@ public class JiraProperties {
         return uri;
     }
 
+    public boolean isEnabled() { return enabled; }
+    public void setEnabled(boolean enabled) { this.enabled = enabled; }
     public String getBaseUrl() { return baseUrl; }
     public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
     public String getUsername() { return username; }

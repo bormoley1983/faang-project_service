@@ -62,12 +62,13 @@ services:
     target-height: ${S3_TARGET_HEIGHT:566}
 
   payment-service:
-    host: ${PAYMENT_SERVICE_HOST:http://localhost}
+    host: ${PAYMENT_SERVICE_HOST:localhost}
     port: ${PAYMENT_SERVICE_PORT:8082}
   user-service:
-    host: ${USER_SERVICE_HOST:http://localhost}
+    host: ${USER_SERVICE_HOST:localhost}
     port: ${USER_SERVICE_PORT:8080}
   jira:
+    enabled: ${JIRA_ENABLED:false}
     base-url: ${JIRA_BASE_URL:}
     username: ${JIRA_USERNAME:}
     password: ${JIRA_PASSWORD:}
@@ -81,6 +82,7 @@ calculations_messages_processing:
 google:
   calendar:
     application-name: "CorporationX Project Service"
+    enabled: ${GOOGLE_CALENDAR_ENABLED:false}
     credentials-json: ${GOOGLE_CALENDAR_CREDENTIALS_JSON:}
 
 logging:

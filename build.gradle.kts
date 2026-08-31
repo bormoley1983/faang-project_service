@@ -144,6 +144,9 @@ tasks.jacocoTestReport {
     classDirectories.setFrom(
         fileTree(project.buildDir.resolve("classes/java/main")) {
             include("**/service/**")
+            include("**/filter/**")
+            include("**/validator/**")
+            include("**/utils/parser/**")
         }
     )
 
@@ -155,7 +158,10 @@ tasks.jacocoTestCoverageVerification {
 
     classDirectories.setFrom(
         fileTree(project.buildDir.resolve("classes/java/main")) {
-            include("**/service/**)")
+            include("**/service/**")
+            include("**/filter/**")
+            include("**/validator/**")
+            include("**/utils/parser/**")
         }
     )
 
@@ -164,10 +170,21 @@ tasks.jacocoTestCoverageVerification {
             limit {
                 counter = "LINE"
                 value = "COVEREDRATIO"
-                minimum = 0.70.toBigDecimal()
+                minimum = 0.75.toBigDecimal()
+            }
+        }
+        rule {
+            limit {
+                counter = "BRANCH"
+                value = "COVEREDRATIO"
+                minimum = 0.60.toBigDecimal()
             }
         }
     }
+}
+
+tasks.check {
+    dependsOn(tasks.jacocoTestCoverageVerification)
 }
 
 tasks.processTestResources {

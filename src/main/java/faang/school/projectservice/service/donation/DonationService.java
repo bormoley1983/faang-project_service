@@ -4,7 +4,6 @@ import faang.school.projectservice.config.context.user.UserContext;
 import faang.school.projectservice.dto.client.PaymentResponse;
 import faang.school.projectservice.dto.donation.DonationFilterDto;
 import faang.school.projectservice.model.Donation;
-import faang.school.projectservice.repository.CampaignRepository;
 import faang.school.projectservice.repository.DonationRepository;
 import faang.school.projectservice.service.payment.PaymentService;
 import faang.school.projectservice.service.user.UserService;
@@ -24,7 +23,6 @@ public class DonationService {
     private final PaymentService paymentService;
     private final DonationIntentService donationIntentService;
     private final DonationRepository donationRepository;
-    private final CampaignRepository campaignRepository;
     private final UserService userService;
     private final UserContext userContext;
 

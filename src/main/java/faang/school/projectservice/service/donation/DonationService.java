@@ -3,7 +3,6 @@ package faang.school.projectservice.service.donation;
 import faang.school.projectservice.config.context.user.UserContext;
 import faang.school.projectservice.dto.client.PaymentResponse;
 import faang.school.projectservice.dto.donation.DonationFilterDto;
-import faang.school.projectservice.filter.donation.DonationFilter;
 import faang.school.projectservice.model.Donation;
 import faang.school.projectservice.repository.CampaignRepository;
 import faang.school.projectservice.repository.DonationRepository;
@@ -16,10 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.util.Comparator;
-import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Stream;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -31,7 +27,6 @@ public class DonationService {
     private final CampaignRepository campaignRepository;
     private final UserService userService;
     private final UserContext userContext;
-    private final List<DonationFilter> donationFilters;
 
     public Donation createDonation(Donation donation, java.util.UUID idempotencyKey) {
         long userId = getUserId();
@@ -73,19 +68,6 @@ public class DonationService {
         log.info("Fetching all donations for user ID {} with filters: {}", userId, dtoFilters);
         return donationRepository.searchByUserId(userId, filters.getDatePattern(), filters.getCurrencyPattern(),
                 filters.getMinAmountPattern(), filters.getMaxAmountPattern(), pageable);
-    }
-
-    private Stream<Donation> filterDonations(Stream<Donation> donations, DonationFilterDto dtoFilters) {
-        List<DonationFilter> applicableFilters = donationFilters.stream()
-                .filter(donationFilter -> donationFilter.isApplicable(dtoFilters))
-                .toList();
-
-        log.debug("Applying {} filters to donations", applicableFilters.size());
-        return donations.filter(donation ->
-                        applicableFilters.stream()
-                                .allMatch(donationFilter ->
-                                        donationFilter.apply(donation, dtoFilters)))
-                .sorted(Comparator.comparing(Donation::getDonationTime).reversed());
     }
 
     private long getUserId() {

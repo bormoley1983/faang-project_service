@@ -7,7 +7,6 @@ import faang.school.projectservice.dto.client.PaymentStatus;
 import faang.school.projectservice.dto.client.UserDto;
 import faang.school.projectservice.dto.donation.DonationFilterDto;
 import faang.school.projectservice.exception.payment.CampaignNotActiveException;
-import faang.school.projectservice.filter.donation.DonationFilter;
 import faang.school.projectservice.model.Campaign;
 import faang.school.projectservice.model.CampaignStatus;
 import faang.school.projectservice.model.Donation;
@@ -26,7 +25,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
@@ -61,9 +59,6 @@ public class DonationServiceTest {
 
     @Mock
     private UserContext userContext;
-
-    @Mock
-    private List<DonationFilter> donationFilters;
 
     @Captor
     private ArgumentCaptor<Long> idCaptor;

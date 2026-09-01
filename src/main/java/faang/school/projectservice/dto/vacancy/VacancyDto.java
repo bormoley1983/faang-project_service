@@ -1,6 +1,6 @@
 package faang.school.projectservice.dto.vacancy;
 
-import faang.school.projectservice.model.Project;
+import faang.school.projectservice.dto.project.ProjectDto;
 import faang.school.projectservice.model.TeamRole;
 import faang.school.projectservice.model.VacancyStatus;
 import lombok.AllArgsConstructor;
@@ -16,7 +16,7 @@ public class VacancyDto {
     private String name;
     private String description;
     private TeamRole position;
-    private Project project;
+    private ProjectDto project;
     private VacancyStatus status;
     private Double salary;
     private Integer count;

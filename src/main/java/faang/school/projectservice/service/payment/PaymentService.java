@@ -26,17 +26,18 @@ public class PaymentService {
 
         ResponseEntity<PaymentResponse> paymentResponse = paymentServiceClient.sendPayment(paymentRequest);
         log.debug("Received payment response: {}", paymentResponse);
+        PaymentResponse responseBody = paymentResponse.getBody();
 
-        if (paymentResponse.getStatusCode() != HttpStatus.OK || paymentResponse.getBody() == null
-                || paymentResponse.getBody().status() != faang.school.projectservice.dto.client.PaymentStatus.SUCCESS
-                || paymentResponse.getBody().paymentNumber() != paymentNumber) {
+        if (paymentResponse.getStatusCode() != HttpStatus.OK || responseBody == null
+                || responseBody.status() != faang.school.projectservice.dto.client.PaymentStatus.SUCCESS
+                || responseBody.paymentNumber() != paymentNumber) {
             log.error("Payment failed. Status: {}, Response Body: {}",
                     paymentResponse.getStatusCode(),
-                    paymentResponse.getBody());
+                    responseBody);
             throw new PaymentFailedException("Payment failed for amount " + amount + " " + currency);
         }
 
         log.info("Payment processed successfully. Payment number: {}", paymentNumber);
-        return paymentResponse.getBody();
+        return responseBody;
     }
 }

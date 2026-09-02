@@ -31,9 +31,9 @@ import static faang.school.projectservice.service.s3.S3ErrorMessage.FAILED_UPLOA
 @Service
 @RequiredArgsConstructor
 public class S3Service {
+    private static final String KEY_PATTERN = "%s/%s_%s";
 
     private final S3Client s3Client;
-    private final String keyPattern = "%s/%s_%s";
 
     @Value("${services.s3.bucket-name}")
     private String bucketName;
@@ -43,7 +43,7 @@ public class S3Service {
         String fileType = file.getContentType();
         String fileName = file.getOriginalFilename();
 
-        String key = String.format(keyPattern, folder,
+        String key = String.format(KEY_PATTERN, folder,
                 UUID.randomUUID(), fileName);
 
         try {
@@ -57,7 +57,7 @@ public class S3Service {
             s3Client.putObject(putObjectRequest, 
                     RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
             
-            log.info("File uploaded successfully: {}", key);
+            log.info("File uploaded successfully");
         } catch (S3Exception e) {
             log.error("Failed to upload file to S3: ", e);
             throw new FileException(FAILED_UPLOAD_FILE);
@@ -77,7 +77,7 @@ public class S3Service {
     }
 
     public String uploadFile(InputStream inputStream, long size, String contentType, String fileName, String folder) {
-        String key = String.format(keyPattern, folder, UUID.randomUUID(), fileName);
+        String key = String.format(KEY_PATTERN, folder, UUID.randomUUID(), fileName);
         try {
             PutObjectRequest request = PutObjectRequest.builder()
                     .bucket(bucketName).key(key).contentType(contentType).contentLength(size).build();

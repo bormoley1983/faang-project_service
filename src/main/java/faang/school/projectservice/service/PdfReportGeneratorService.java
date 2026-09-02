@@ -78,7 +78,8 @@ public class PdfReportGeneratorService {
         }
         try {
             return Optional.ofNullable(userServiceClient.getUser(ownerId))
-                    .map(response -> response.getBody().getUsername())
+                    .flatMap(response -> Optional.ofNullable(response.getBody()))
+                    .map(response -> response.getUsername())
                     .orElse("Unknown User");
         } catch (FeignException.NotFound e) {
             log.warn("User with ID {} not found", ownerId);

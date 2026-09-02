@@ -5,6 +5,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 
 public class ResizedMultipartFile implements MultipartFile {
     private final MultipartFile originalFile;
@@ -12,7 +13,9 @@ public class ResizedMultipartFile implements MultipartFile {
 
     public ResizedMultipartFile(MultipartFile originalFile, byte[] resizedImageBytes) {
         this.originalFile = originalFile;
-        this.resizedImageBytes = resizedImageBytes;
+        this.resizedImageBytes = resizedImageBytes == null
+                ? new byte[0]
+                : Arrays.copyOf(resizedImageBytes, resizedImageBytes.length);
     }
 
     @Override
@@ -42,7 +45,7 @@ public class ResizedMultipartFile implements MultipartFile {
 
     @Override
     public byte[] getBytes() throws IOException {
-        return resizedImageBytes;
+        return Arrays.copyOf(resizedImageBytes, resizedImageBytes.length);
     }
 
     @Override

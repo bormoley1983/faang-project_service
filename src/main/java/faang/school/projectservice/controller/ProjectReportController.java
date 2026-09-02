@@ -23,7 +23,7 @@ public class ProjectReportController {
 
     @PostMapping("/generate/{projectId}")
     public ResponseEntity<Resource> generateReport(@PathVariable Long projectId) {
-        log.info("Generating report for projectId: {}", projectId);
+        log.info("Generating project report");
         ProjectReport projectReport = projectReportService.createProjectReport(projectId);
         Resource resource = projectReportService.getUrlResource(projectReport);
             return ResponseEntity.ok()
@@ -34,7 +34,7 @@ public class ProjectReportController {
 
     @GetMapping("/{projectId}")
     public ResponseEntity<Resource> getReport(@PathVariable Long projectId) {
-        log.info("Fetching report for projectId: {}", projectId);
+        log.info("Fetching project report");
         ProjectReport projectReport = projectReportService.getProjectReport(projectId);
         Resource resource = projectReportService.getUrlResource(projectReport);
             return ResponseEntity.ok()

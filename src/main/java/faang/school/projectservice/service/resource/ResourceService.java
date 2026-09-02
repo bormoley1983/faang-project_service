@@ -36,14 +36,14 @@ import static faang.school.projectservice.service.resource.ResourceErrorMessage.
 @RequiredArgsConstructor
 @Service
 public class ResourceService {
+    private static final String FOLDER_PATTERN = "%s-%s";
+
     private final S3Service s3Service;
     private final StorageTransactionCoordinator storageTransactionCoordinator;
 
     private final ResourceRepository resourceRepository;
     private final ProjectRepository projectRepository;
     private final TeamMemberRepository teamMemberRepository;
-
-    private final String folderPattern = "%s-%s";
 
     @Transactional
     public Resource addResource(Long projectId, Long userId, MultipartFile file) {
@@ -56,7 +56,7 @@ public class ResourceService {
             throw new FileException(INVALID_FILE_EXTENSION);
         }
         BigInteger newStorageSize = calculateStorageSize(project, file.getSize());
-        String folder = String.format(folderPattern, projectId, project.getName());
+        String folder = String.format(FOLDER_PATTERN, projectId, project.getName());
 
         Resource resource = s3Service.uploadFile(file, folder);
         storageTransactionCoordinator.deleteOnRollback(resource.getKey());
@@ -87,7 +87,7 @@ public class ResourceService {
 
         long sizeDifference = file.getSize() - oldResource.getSize().longValue();
         BigInteger newStorageSize = calculateStorageSize(project, sizeDifference);
-        String folder = String.format(folderPattern, projectId, project.getName());
+        String folder = String.format(FOLDER_PATTERN, projectId, project.getName());
 
         Resource newResource = s3Service.uploadFile(file, folder);
         storageTransactionCoordinator.deleteOnRollback(newResource.getKey());

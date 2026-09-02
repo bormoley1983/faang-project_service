@@ -94,9 +94,15 @@ class ResizedMultipartFileTest {
     @Test
     @DisplayName("getBytes returns the resized bytes")
     void getBytesReturnsResizedBytes() throws IOException {
+        byte[] expected = resizedBytes.clone();
         ResizedMultipartFile resized = new ResizedMultipartFile(originalFile, resizedBytes);
+        resizedBytes[0] = 99;
 
-        assertThat(resized.getBytes()).isSameAs(resizedBytes);
+        byte[] returned = resized.getBytes();
+        returned[1] = 99;
+
+        assertThat(resized.getBytes()).containsExactly(expected);
+        assertThat(resized.getBytes()).isNotSameAs(resizedBytes);
     }
 
     @Test

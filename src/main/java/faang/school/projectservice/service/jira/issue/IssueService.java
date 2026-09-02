@@ -24,7 +24,7 @@ public class IssueService {
     private final JqlParser jqlParser;
 
     public Issue createIssue(IssueInput issueInput) {
-        log.info("Starting creation of issue with input: {}", issueInput);
+        log.info("Starting issue creation");
 
         IssueRestClient issueClient = jiraClient.getIssueClient();
         BasicIssue basicIssue = issueClient.createIssue(issueInput).claim();
@@ -35,18 +35,18 @@ public class IssueService {
     }
 
     public Issue updateIssue(String issueKey, IssueInput issueInput) {
-        log.info("Updating issue {} with input: {}", issueKey, issueInput);
+        log.info("Updating issue");
 
         IssueRestClient issueClient = jiraClient.getIssueClient();
         issueClient.updateIssue(issueKey, issueInput).claim();
 
-        log.info("Issue {} updated successfully", issueKey);
+        log.info("Issue updated successfully");
 
         return getIssueByKey(issueKey);
     }
 
     public List<Issue> getAllIssues(IssueFilterDto filters) {
-        log.info("Fetching issues with filters: {}", filters);
+        log.info("Fetching issues");
         SearchRestClient searchClient = jiraClient.getSearchClient();
 
         String jql = jqlParser.buildJql(filters);
@@ -54,18 +54,18 @@ public class IssueService {
 
         List<Issue> issues = StreamSupport.stream(result.getIssues().spliterator(), false).toList();
 
-        log.debug("Founded issues {}", issues);
+        log.debug("Fetched {} issues", issues.size());
 
         return issues;
     }
 
     public Issue getIssueByKey(String issueKey) {
-        log.info("Fetching issue by key: {}", issueKey);
+        log.info("Fetching issue by key");
 
         IssueRestClient issueClient = jiraClient.getIssueClient();
         Issue issue = issueClient.getIssue(issueKey).claim();
 
-        log.debug("Retrieved issue {} details: {}", issueKey, issue);
+        log.debug("Retrieved issue details");
 
         return issue;
     }

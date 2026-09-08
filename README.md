@@ -31,6 +31,19 @@ docker run -p 8080:8080 \
   project-service
 ```
 
+## API Documentation (Swagger UI)
+
+Interactive OpenAPI/Swagger documentation is a supported deliverable for this service. All faang services standardize on springdoc's **default** paths (no per-service `springdoc.swagger-ui.path` override):
+
+| Resource | Path | Notes |
+| --- | --- | --- |
+| Swagger UI | `/swagger-ui/index.html` | Interactive API documentation (HTML) |
+| OpenAPI document | `/v3/api-docs` | Machine-readable OpenAPI 3 JSON |
+
+Both routes are unauthenticated and served by the application itself; no ingress rewrite, wildcard route, or Traefik middleware is required. The contract (served UI page + OpenAPI doc) is pinned by `SwaggerDocumentationContractIT`.
+
+> Operational verification: use the service's readiness endpoint (`/actuator/health/readiness`) or any approved read-only endpoint for health checks. The Swagger UI path is for human/API exploration, not liveness/readiness probing.
+
 ## Configuration
 
 Main config: [src/main/resources/application.yaml](src/main/resources/application.yaml)  

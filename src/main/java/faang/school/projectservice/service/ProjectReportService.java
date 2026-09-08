@@ -1,7 +1,7 @@
 package faang.school.projectservice.service;
 
-import faang.school.projectservice.exseption.ErrorReadingFile;
-import faang.school.projectservice.exseption.ProjectNotFoundException;
+import faang.school.projectservice.exception.ErrorReadingFile;
+import faang.school.projectservice.exception.ProjectNotFoundException;
 import faang.school.projectservice.model.Project;
 import faang.school.projectservice.model.ProjectReport;
 import faang.school.projectservice.repository.ProjectReportRepository;

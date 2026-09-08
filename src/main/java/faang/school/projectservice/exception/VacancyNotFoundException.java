@@ -1,4 +1,4 @@
-package faang.school.projectservice.exseption;
+package faang.school.projectservice.exception;
 
 public class VacancyNotFoundException extends RuntimeException {
 

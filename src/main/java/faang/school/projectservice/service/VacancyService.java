@@ -1,7 +1,7 @@
 package faang.school.projectservice.service;
 
-import faang.school.projectservice.exseption.ProjectNotFoundException;
-import faang.school.projectservice.exseption.VacancyNotFoundException;
+import faang.school.projectservice.exception.ProjectNotFoundException;
+import faang.school.projectservice.exception.VacancyNotFoundException;
 import faang.school.projectservice.model.Candidate;
 import faang.school.projectservice.model.Project;
 import faang.school.projectservice.model.TeamRole;
